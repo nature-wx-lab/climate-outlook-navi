@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generator_version": "1.0.0",
-  "dataset_id": "climate-baseline-201-20260710T104655",
-  "generated_at": "2026-07-10T10:46:55+09:00",
+  "generator_version": "2.0.1",
+  "dataset_id": "climate-baseline-201-0cea604608dfd5ff",
+  "generated_at": "2026-07-10T17:18:26+09:00",
   "source": {
     "logical_database_id": "naturewxlab-climate-foundation-db",
     "database_version": "v2.9",
@@ -10,6 +10,8 @@
     "master_sha256": "97725d633cca4e856781d7a07b64a09dde2b0183375096573603096f4e058e27",
     "source_audit": {
       "1991_2020": {
+        "file": "mesh1km_201_1991_2020.csv.gz",
+        "sha256": "832db3b9649ab53027cd35a27adcebfd21265daa18bcd2d072f7da59240725bb",
         "row_count": 5040321,
         "month_counts": {
           "1": 387717,
@@ -56,11 +58,11 @@
           "12": 24.56,
           "13": 25.8
         },
-        "max_quantization_error_c": 0.0,
-        "logical_source_id": "climate-mesh-1km/201/1991_2020",
-        "sha256": "832db3b9649ab53027cd35a27adcebfd21265daa18bcd2d072f7da59240725bb"
+        "max_quantization_error": 0.0
       },
       "1996_2025": {
+        "file": "mesh1km_201_1996_2025.csv.gz",
+        "sha256": "491b031f44abea9acf6bcc00aabd3aa0a01315c07a8a927c940a540d17de0fa0",
         "row_count": 5040321,
         "month_counts": {
           "1": 387717,
@@ -107,18 +109,27 @@
           "12": 24.77,
           "13": 25.91
         },
-        "max_quantization_error_c": 0.0,
-        "logical_source_id": "climate-mesh-1km/201/1996_2025",
-        "sha256": "491b031f44abea9acf6bcc00aabd3aa0a01315c07a8a927c940a540d17de0fa0"
+        "max_quantization_error": 0.0
       }
     }
   },
   "element": {
     "code": "201",
     "name": "平均気温",
+    "short_name": "平均気温",
+    "definition": "日平均気温の30年平均",
     "unit": "℃",
+    "decimal_places": 2,
     "value_scale": 100,
-    "nodata": -32768
+    "nodata": -32768,
+    "annual": {
+      "available": true,
+      "label": "年平均",
+      "definition": "12か月を通した年平均",
+      "derived_from_monthly_grid": false
+    },
+    "forecast_element": "temperature",
+    "quality_note": "観測値等をもとにNature Wx Labが独自算出・独自内挿した1km面です。"
   },
   "windows": [
     {
@@ -186,11 +197,16 @@
   ],
   "mesh_count": 387717,
   "mesh_unique_count": 387717,
+  "value_count": 10080642,
   "chunk_format": {
     "magic": "NWCBCH1",
     "version": 1,
     "header_bytes": 24,
-    "layout": "codes[u32], lat[f32], lon[f32], values[i16 window-major/month-major]",
+    "layout": "codes[u32], lat[f32], lon[f32], values[int16 window-major/month-major]",
+    "dtype": "int16",
+    "dtype_code": 1,
+    "value_scale": 100,
+    "nodata": -32768,
     "window_order": [
       "1991_2020",
       "1996_2025"
@@ -1634,87 +1650,194 @@
         "east": 154.0283203125
       },
       "source_mesh_count": 387717,
-      "unique_center_pixels": 369168,
-      "center_pixel_collisions": 18549,
-      "display_note": "全国表示用の描画縮約。地点参照バイナリは全1kmメッシュを保持。"
+      "unique_render_pixels": 369168,
+      "note": "全国表示用の描画縮約。地点値は全1kmメッシュを保持するchunkから取得。"
     },
-    "raw_legend": {
-      "breaks": [
-        -27,
-        -24,
-        -21,
-        -18,
-        -15,
-        -12,
-        -9,
-        -6,
-        -3,
-        0,
-        3,
-        6,
-        9,
-        12,
-        15,
-        18,
-        21,
-        24,
-        27,
-        30
-      ],
-      "colors": [
-        "#4b146c",
-        "#5c28a7",
-        "#4457c4",
-        "#2a7bd1",
-        "#2da9d2",
-        "#42c7c5",
-        "#64d69b",
-        "#91df70",
-        "#c4e85d",
-        "#eced72",
-        "#ffe36a",
-        "#ffc44d",
-        "#ff9f36",
-        "#fb792c",
-        "#ef5128",
-        "#d92d25",
-        "#b8172b",
-        "#921338",
-        "#6e123f",
-        "#4c123f",
-        "#2c102f"
-      ]
-    },
-    "difference_legend": {
-      "breaks": [
-        -2.0,
-        -1.5,
-        -1.0,
-        -0.6,
-        -0.3,
-        -0.1,
-        0.1,
-        0.3,
-        0.6,
-        1.0,
-        1.5,
-        2.0
-      ],
-      "colors": [
-        "#2d2a78",
-        "#4149a8",
-        "#5978c7",
-        "#79a4dc",
-        "#a8c9e8",
-        "#d9e8f2",
-        "#f2f2ee",
-        "#f7ddd0",
-        "#efb8a1",
-        "#e98b70",
-        "#d95f4f",
-        "#b9363e",
-        "#7f1d35"
-      ]
+    "legends": {
+      "monthly": {
+        "absolute": {
+          "title": "気温",
+          "breaks": [
+            -27,
+            -24,
+            -21,
+            -18,
+            -15,
+            -12,
+            -9,
+            -6,
+            -3,
+            0,
+            3,
+            6,
+            9,
+            12,
+            15,
+            18,
+            21,
+            24,
+            27,
+            30
+          ],
+          "colors": [
+            "#4b146c",
+            "#5c28a7",
+            "#4457c4",
+            "#2a7bd1",
+            "#2da9d2",
+            "#42c7c5",
+            "#64d69b",
+            "#91df70",
+            "#c4e85d",
+            "#eced72",
+            "#ffe36a",
+            "#ffc44d",
+            "#ff9f36",
+            "#fb792c",
+            "#ef5128",
+            "#d92d25",
+            "#b8172b",
+            "#921338",
+            "#6e123f",
+            "#4c123f",
+            "#2c102f"
+          ],
+          "labels": {
+            "low": "−27℃以下",
+            "middle": "0℃",
+            "high": "30℃超"
+          }
+        },
+        "difference": {
+          "title": "30年平均値の更新差",
+          "breaks": [
+            -2.0,
+            -1.5,
+            -1.0,
+            -0.6,
+            -0.3,
+            -0.1,
+            0.1,
+            0.3,
+            0.6,
+            1.0,
+            1.5,
+            2.0
+          ],
+          "colors": [
+            "#2d2a78",
+            "#4149a8",
+            "#5978c7",
+            "#79a4dc",
+            "#a8c9e8",
+            "#d9e8f2",
+            "#f2f2ee",
+            "#f7ddd0",
+            "#efb8a1",
+            "#e98b70",
+            "#d95f4f",
+            "#b9363e",
+            "#7f1d35"
+          ],
+          "labels": {
+            "low": "−2.0℃以下",
+            "middle": "0℃",
+            "high": "+2.0℃超"
+          }
+        }
+      },
+      "annual": {
+        "absolute": {
+          "title": "気温",
+          "breaks": [
+            -27,
+            -24,
+            -21,
+            -18,
+            -15,
+            -12,
+            -9,
+            -6,
+            -3,
+            0,
+            3,
+            6,
+            9,
+            12,
+            15,
+            18,
+            21,
+            24,
+            27,
+            30
+          ],
+          "colors": [
+            "#4b146c",
+            "#5c28a7",
+            "#4457c4",
+            "#2a7bd1",
+            "#2da9d2",
+            "#42c7c5",
+            "#64d69b",
+            "#91df70",
+            "#c4e85d",
+            "#eced72",
+            "#ffe36a",
+            "#ffc44d",
+            "#ff9f36",
+            "#fb792c",
+            "#ef5128",
+            "#d92d25",
+            "#b8172b",
+            "#921338",
+            "#6e123f",
+            "#4c123f",
+            "#2c102f"
+          ],
+          "labels": {
+            "low": "−27℃以下",
+            "middle": "0℃",
+            "high": "30℃超"
+          }
+        },
+        "difference": {
+          "title": "30年平均値の更新差",
+          "breaks": [
+            -2.0,
+            -1.5,
+            -1.0,
+            -0.6,
+            -0.3,
+            -0.1,
+            0.1,
+            0.3,
+            0.6,
+            1.0,
+            1.5,
+            2.0
+          ],
+          "colors": [
+            "#2d2a78",
+            "#4149a8",
+            "#5978c7",
+            "#79a4dc",
+            "#a8c9e8",
+            "#d9e8f2",
+            "#f2f2ee",
+            "#f7ddd0",
+            "#efb8a1",
+            "#e98b70",
+            "#d95f4f",
+            "#b9363e",
+            "#7f1d35"
+          ],
+          "labels": {
+            "low": "−2.0℃以下",
+            "middle": "0℃",
+            "high": "+2.0℃超"
+          }
+        }
+      }
     },
     "files": {
       "1991_2020": {
@@ -1918,87 +2041,117 @@
           "sha256": "9d288042f377e09cadd5a0e821b684daaa523d3451ba4e10c2364c913722a1e7"
         }
       }
-    }
-  },
-  "static": {
-    "prefectures": {
-      "path": "static/prefectures.geojson",
-      "bytes": 3106758,
-      "sha256": "82cfa0c689834819fa1e4357279f82ea766c5b2255bc4f20f8cb7b96c8aa70bb"
+    },
+    "raw_legend": {
+      "title": "気温",
+      "breaks": [
+        -27,
+        -24,
+        -21,
+        -18,
+        -15,
+        -12,
+        -9,
+        -6,
+        -3,
+        0,
+        3,
+        6,
+        9,
+        12,
+        15,
+        18,
+        21,
+        24,
+        27,
+        30
+      ],
+      "colors": [
+        "#4b146c",
+        "#5c28a7",
+        "#4457c4",
+        "#2a7bd1",
+        "#2da9d2",
+        "#42c7c5",
+        "#64d69b",
+        "#91df70",
+        "#c4e85d",
+        "#eced72",
+        "#ffe36a",
+        "#ffc44d",
+        "#ff9f36",
+        "#fb792c",
+        "#ef5128",
+        "#d92d25",
+        "#b8172b",
+        "#921338",
+        "#6e123f",
+        "#4c123f",
+        "#2c102f"
+      ],
+      "labels": {
+        "low": "−27℃以下",
+        "middle": "0℃",
+        "high": "30℃超"
+      }
+    },
+    "difference_legend": {
+      "title": "30年平均値の更新差",
+      "breaks": [
+        -2.0,
+        -1.5,
+        -1.0,
+        -0.6,
+        -0.3,
+        -0.1,
+        0.1,
+        0.3,
+        0.6,
+        1.0,
+        1.5,
+        2.0
+      ],
+      "colors": [
+        "#2d2a78",
+        "#4149a8",
+        "#5978c7",
+        "#79a4dc",
+        "#a8c9e8",
+        "#d9e8f2",
+        "#f2f2ee",
+        "#f7ddd0",
+        "#efb8a1",
+        "#e98b70",
+        "#d95f4f",
+        "#b9363e",
+        "#7f1d35"
+      ],
+      "labels": {
+        "low": "−2.0℃以下",
+        "middle": "0℃",
+        "high": "+2.0℃超"
+      }
     }
   },
   "validation": {
     "master_count_ok": true,
     "master_duplicates": 0,
-    "input_master_was_sorted": false,
     "public_chunk_codes_sorted": true,
     "window_row_counts_ok": true,
     "mesh_order_matches_master": true,
     "missing_values": 0,
     "representative_values": [
       {
-        "mesh_code": "30365015",
-        "center_lat": 20.429167,
-        "center_lon": 136.068756,
-        "month_7": {
-          "1991_2020": 28.31,
-          "1996_2025": 28.36
-        },
-        "annual": {
-          "1991_2020": 23.09,
-          "1996_2025": 23.21
-        }
-      },
-      {
-        "mesh_code": "52322408",
-        "center_lat": 34.837502,
-        "center_lon": 132.606247,
-        "month_7": {
-          "1991_2020": 23.41,
-          "1996_2025": 23.68
-        },
-        "annual": {
-          "1991_2020": 11.87,
-          "1996_2025": 12.1
-        }
-      },
-      {
-        "mesh_code": "54391519",
-        "center_lat": 36.095833,
-        "center_lon": 139.743744,
-        "month_7": {
-          "1991_2020": 25.54,
-          "1996_2025": 26.02
-        },
-        "annual": {
-          "1991_2020": 14.96,
-          "1996_2025": 15.24
-        }
-      },
-      {
-        "mesh_code": "61400642",
-        "center_lat": 40.704166,
-        "center_lon": 140.78125,
-        "month_7": {
-          "1991_2020": 19.88,
-          "1996_2025": 20.37
-        },
-        "annual": {
-          "1991_2020": 8.09,
-          "1996_2025": 8.34
-        }
-      },
-      {
-        "mesh_code": "68482720",
-        "center_lat": 45.520832,
-        "center_lon": 148.881256,
-        "month_7": {
-          "1991_2020": 15.38,
-          "1996_2025": 15.98
-        },
-        "annual": {
-          "1991_2020": 5.41,
-          "1996_2025": 5.66
+        "mesh_code": "53394611",
+        "values": {
+          "7": {
+            "1991_2020": 26.34,
+            "1996_2025": 26.67
+          },
+          "13": {
+            "1991_2020": 16.59,
+            "1996_2025": 16.75
+          }
         }
       }
     ]
@@ -2006,5 +2159,12 @@
   "wording": {
     "difference": "30年平均値の更新差（1996–2025 − 1991–2020）",
     "resolution": "気候平均は独自算出の全国陸域1kmメッシュ。季節予報は公式の地域単位。"
+  },
+  "static": {
+    "prefectures": {
+      "path": "static/prefectures.geojson",
+      "bytes": 3106758,
+      "sha256": "82cfa0c689834819fa1e4357279f82ea766c5b2255bc4f20f8cb7b96c8aa70bb"
+    }
   }
 }

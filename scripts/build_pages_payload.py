@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -57,14 +58,59 @@ def safe_manifest_path(prefix: str, raw_path: object) -> str:
     return f"{prefix}/{path.as_posix()}"
 
 
+def verify_inventory_entry(relative_path: str, entry: object) -> None:
+    if not isinstance(entry, dict):
+        raise ValueError(f"asset inventory entry must be an object: {relative_path}")
+    expected_bytes = entry.get("bytes")
+    expected_sha = entry.get("sha256")
+    if not isinstance(expected_bytes, int) or expected_bytes < 0:
+        raise ValueError(f"asset inventory byte count is invalid: {relative_path}")
+    if not isinstance(expected_sha, str) or re.fullmatch(r"[0-9a-f]{64}", expected_sha) is None:
+        raise ValueError(f"asset inventory checksum is invalid: {relative_path}")
+    source = ROOT / relative_path
+    if not source.is_file():
+        raise FileNotFoundError(f"cataloged asset is missing: {relative_path}")
+    if source.stat().st_size != expected_bytes:
+        raise ValueError(f"cataloged asset byte count mismatch: {relative_path}")
+    if sha256_path(source) != expected_sha:
+        raise ValueError(f"cataloged asset checksum mismatch: {relative_path}")
+
+
+def catalog_climate_paths(catalog: dict[str, object]) -> set[str]:
+    if catalog.get("schema_version") != 1:
+        raise ValueError("unsupported climate catalog schema")
+    assets = catalog.get("assets")
+    if not isinstance(assets, dict) or not assets:
+        raise ValueError("climate catalog asset inventory is missing")
+    paths = {"data/climate/catalog.json"}
+    for raw_path, entry in assets.items():
+        relative_path = safe_manifest_path("data/climate", raw_path)
+        if relative_path == "data/climate/catalog.json":
+            raise ValueError("climate catalog must not inventory itself")
+        verify_inventory_entry(relative_path, entry)
+        paths.add(relative_path)
+    actual = {
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "data/climate").rglob("*")
+        if path.is_file()
+    }
+    if actual != paths:
+        raise ValueError(f"climate catalog file set mismatch: {sorted(actual ^ paths)}")
+    return paths
+
+
 def manifest_data_paths() -> tuple[str, ...]:
-    climate = json.loads((ROOT / "data/climate/manifest.json").read_text(encoding="utf-8"))
     season = json.loads((ROOT / "data/season/manifest.json").read_text(encoding="utf-8"))
-    climate_paths = {"data/climate/manifest.json"}
-    climate_paths.update(safe_manifest_path("data/climate", entry["path"]) for entry in climate["chunks"].values())
-    for group in climate["rasters"]["files"].values():
-        climate_paths.update(safe_manifest_path("data/climate", entry["path"]) for entry in group.values())
-    climate_paths.add(safe_manifest_path("data/climate", climate["static"]["prefectures"]["path"]))
+    catalog_path = ROOT / "data/climate/catalog.json"
+    if catalog_path.is_file():
+        climate_paths = catalog_climate_paths(json.loads(catalog_path.read_text(encoding="utf-8")))
+    else:
+        climate = json.loads((ROOT / "data/climate/manifest.json").read_text(encoding="utf-8"))
+        climate_paths = {"data/climate/manifest.json"}
+        climate_paths.update(safe_manifest_path("data/climate", entry["path"]) for entry in climate["chunks"].values())
+        for group in climate["rasters"]["files"].values():
+            climate_paths.update(safe_manifest_path("data/climate", entry["path"]) for entry in group.values())
+        climate_paths.add(safe_manifest_path("data/climate", climate["static"]["prefectures"]["path"]))
     season_paths = {"data/season/manifest.json"}
     season_paths.update(safe_manifest_path("data/season", entry["path"]) for entry in season["files"].values())
     return tuple(sorted(climate_paths | season_paths))
@@ -97,7 +143,11 @@ def main() -> None:
     for name in (*CONTROL_FILES, *PUBLIC_FILES, *manifest_data_paths()):
         copy_relative(name, output)
 
-    climate_manifest = json.loads((output / "data/climate/manifest.json").read_text(encoding="utf-8"))
+    climate_catalog_path = output / "data/climate/catalog.json"
+    climate_manifest_path = output / "data/climate/manifest.json"
+    climate_metadata = json.loads(
+        (climate_catalog_path if climate_catalog_path.is_file() else climate_manifest_path).read_text(encoding="utf-8")
+    )
     season_manifest = json.loads((output / "data/season/manifest.json").read_text(encoding="utf-8"))
     files: dict[str, dict[str, int | str]] = {}
     control_files: dict[str, dict[str, int | str]] = {}
@@ -113,7 +163,7 @@ def main() -> None:
         "schema_version": 2,
         "source_commit": source_commit(),
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "climate_dataset_id": climate_manifest["dataset_id"],
+        "climate_dataset_id": climate_metadata["dataset_id"],
         "season_dataset_id": season_manifest["dataset_id"],
         "file_count_without_deployment_manifest": len(files) + len(control_files),
         "total_bytes_without_deployment_manifest": sum(

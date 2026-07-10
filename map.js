@@ -13,7 +13,7 @@ const BASES = {
 };
 const FORECAST_COLORS = ["#315eb3", "#b59a31", "#d04a3e"];
 const FORECAST_NEUTRAL = "#646f78";
-const FORECAST_CLASS_LABELS = ["低い", "平年並", "高い"];
+const DEFAULT_FORECAST_CLASS_LABELS = ["低い", "平年並", "高い"];
 
 function dominantClass(probabilities) {
   const max = Math.max(...probabilities);
@@ -21,10 +21,10 @@ function dominantClass(probabilities) {
   return winners.length === 1 ? winners[0] : -1;
 }
 
-function leadClassLabel(probabilities) {
+function leadClassLabel(probabilities, classLabels = DEFAULT_FORECAST_CLASS_LABELS) {
   const max = Math.max(...probabilities);
   const winners = probabilities
-    .map((value, index) => (value === max ? FORECAST_CLASS_LABELS[index] : null))
+    .map((value, index) => (value === max ? classLabels[index] : null))
     .filter(Boolean);
   return winners.length === 1 ? `最多：${winners[0]}` : `同率首位：${winners.join("・")}`;
 }
@@ -130,10 +130,10 @@ export class ClimateMap {
     this.climateLayer?.setOpacity(opacity);
   }
 
-  setSeasonOverlay(regions, term, visible, opacity = 0.28) {
+  setSeasonOverlay(regions, term, visible, opacity = 0.28, classLabels = DEFAULT_FORECAST_CLASS_LABELS) {
     if (this.seasonLayer) this.map.removeLayer(this.seasonLayer);
     this.seasonLayer = null;
-    if (!visible || !term) return;
+    if (!visible || !term || !Object.keys(term.regions || {}).length) return;
     const resolved = term.regions;
     this.seasonLayer = L.geoJSON(regions, {
       pane: "seasonPane",
@@ -155,7 +155,7 @@ export class ClimateMap {
         if (!forecast) return;
         const p = forecast.probabilities;
         layer.bindTooltip(
-          `<b>${feature.properties.name}</b><br>${forecast.forecast_region_name}<br>${leadClassLabel(p)}<br>低い ${p[0]}%｜平年並 ${p[1]}%｜高い ${p[2]}%`,
+          `<b>${feature.properties.name}</b><br>${forecast.forecast_region_name}<br>${leadClassLabel(p, classLabels)}<br>${classLabels[0]} ${p[0]}%｜${classLabels[1]} ${p[1]}%｜${classLabels[2]} ${p[2]}%`,
           { sticky: true, className: "season-tooltip", direction: "top" },
         );
         layer.on("click", (event) => this.handlers.onRegionClick?.({

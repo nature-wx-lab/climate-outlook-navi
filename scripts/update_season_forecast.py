@@ -23,8 +23,8 @@ except ImportError:  # pragma: no cover - system CA remains the fallback
     certifi = None
 
 
-SCHEMA_VERSION = 1
-GENERATOR_VERSION = "1.0.3"
+SCHEMA_VERSION = 2
+GENERATOR_VERSION = "2.0.0"
 PRODUCT_URLS = {
     "P1M": "https://www.jma.go.jp/bosai/season/data/P1M.json",
     "P3M": "https://www.jma.go.jp/bosai/season/data/P3M.json",
@@ -54,6 +54,26 @@ REGION_NAMES = {
 TERM_LABELS = {
     "P1M": ["向こう1か月", "第1週", "第2週", "第3～4週"],
     "P3M": ["向こう3か月", "第1か月", "第2か月", "第3か月"],
+}
+ELEMENTS = {
+    "temperature": {"name": "気温", "classes": ["低い", "平年並", "高い"]},
+    "precipitation": {"name": "降水量", "classes": ["少ない", "平年並", "多い"]},
+    "sunshine": {"name": "日照時間", "classes": ["少ない", "平年並", "多い"]},
+    "snowfall": {"name": "降雪量", "classes": ["少ない", "平年並", "多い"]},
+}
+SUPPORTED_TERMS = {
+    "P1M": {
+        "temperature": (0, 1, 2, 3),
+        "precipitation": (0,),
+        "sunshine": (0,),
+        "snowfall": (0,),
+    },
+    "P3M": {
+        "temperature": (0, 1, 2, 3),
+        "precipitation": (0, 1, 2, 3),
+        "sunshine": (),
+        "snowfall": (0,),
+    },
 }
 
 
@@ -185,9 +205,102 @@ def term_periods(product: str, payload: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
+def build_element(
+    product: str,
+    element: str,
+    table: dict[str, Any],
+    periods: list[dict[str, str]],
+    recipes: dict[str, list[str]],
+) -> dict[str, Any]:
+    supported_term_indices = SUPPORTED_TERMS[product][element]
+    unknown_codes = set(table) - set(recipes)
+    if unknown_codes:
+        raise ValueError(f"{product}.{element} contains unknown forecast region codes: {sorted(unknown_codes)}")
+
+    normalized_slots: dict[str, list[Any]] = {}
+    for code, slots in table.items():
+        if not isinstance(slots, list) or len(slots) > 4:
+            raise ValueError(f"{product}.{element}.{code} must contain 0..4 slots")
+        normalized_slots[code] = [
+            normalize_triplet(
+                slots[term_index] if term_index < len(slots) else None,
+                f"{product}.{element}.{code}[{term_index}]",
+            )
+            for term_index in range(4)
+        ]
+
+    unsupported_term_indices = set(range(4)) - set(supported_term_indices)
+    for code, slots in normalized_slots.items():
+        unexpected = [term_index for term_index in unsupported_term_indices if slots[term_index] is not None]
+        if unexpected:
+            raise ValueError(
+                f"{product}.{element}.{code} contains data in unsupported terms: {unexpected}"
+            )
+
+    if not supported_term_indices:
+        return {
+            "status": "unavailable",
+            "supported": False,
+            "unavailable_reason": "not_supported_by_product",
+            "terms": [],
+        }
+
+    terms: list[dict[str, Any]] = []
+    available_term_count = 0
+    for term_index in supported_term_indices:
+        resolved: dict[str, Any] = {}
+        non_null_regions = 0
+        for forecast_code in FORECAST_ORDER:
+            triplet = normalized_slots.get(forecast_code, [None] * 4)[term_index]
+            if triplet is None:
+                continue
+            non_null_regions += 1
+            for class15_code in recipes[forecast_code]:
+                if class15_code in resolved:
+                    raise ValueError(
+                        f"{product}.{element} term {term_index} maps class15 {class15_code} more than once"
+                    )
+                resolved[class15_code] = {
+                    "forecast_region_code": forecast_code,
+                    "forecast_region_name": REGION_NAMES[forecast_code],
+                    "probabilities": triplet,
+                }
+        # JMA publishes temperature, precipitation and sunshine as nationwide
+        # class15 coverage.  Snowfall is different: during the issue season the
+        # official map colors only the forecast regions for which snowfall
+        # probabilities are supplied, so partial class15 coverage is valid.
+        if element != "snowfall" and resolved and len(resolved) != 376:
+            raise ValueError(
+                f"{product}.{element} term {term_index} resolves {len(resolved)} class15 codes, expected 376"
+            )
+        if resolved:
+            available_term_count += 1
+        terms.append({
+            **periods[term_index],
+            "source_non_null_region_count": non_null_regions,
+            "resolved_class15_count": len(resolved),
+            "regions": resolved,
+        })
+
+    if element != "snowfall" and available_term_count != len(supported_term_indices):
+        raise ValueError(
+            f"{product}.{element} has {available_term_count} available terms, expected {len(supported_term_indices)}"
+        )
+    if element == "snowfall" and available_term_count not in (0, len(supported_term_indices)):
+        raise ValueError(f"{product}.snowfall is only partially available")
+
+    available = available_term_count == len(supported_term_indices)
+    return {
+        "status": "available" if available else "unavailable",
+        "supported": True,
+        "unavailable_reason": None if available else "seasonal_not_issued",
+        "terms": terms,
+    }
+
+
 def validate_product(product: str, payload: dict[str, Any], recipes: dict[str, list[str]]) -> dict[str, Any]:
     required = {
-        "temperature", "precipitation", "sunshine", "snowfall",
+        *ELEMENTS,
         "reportDatetime", "targetDatetime", "targetDuration", "timeDefines", "durationType",
     }
     missing = required - payload.keys()
@@ -197,54 +310,14 @@ def validate_product(product: str, payload: dict[str, Any], recipes: dict[str, l
         raise ValueError(f"Unexpected targetDuration for {product}: {payload['targetDuration']}")
     parse_datetime(payload["reportDatetime"])
     periods = term_periods(product, payload)
-    temperature = payload["temperature"]
-    if not isinstance(temperature, dict):
-        raise ValueError(f"{product}.temperature must be an object")
-    unknown_codes = set(temperature) - set(recipes)
-    if unknown_codes:
-        raise ValueError(f"{product} contains unknown forecast region codes: {sorted(unknown_codes)}")
-
-    terms: list[dict[str, Any]] = []
-    for term_index, period in enumerate(periods):
-        resolved: dict[str, Any] = {}
-        non_null_regions = 0
-        for forecast_code in FORECAST_ORDER:
-            slots = temperature.get(forecast_code, [])
-            if not isinstance(slots, list) or len(slots) > 4:
-                raise ValueError(f"{product}.temperature.{forecast_code} must contain 0..4 slots")
-            triplet = normalize_triplet(
-                slots[term_index] if term_index < len(slots) else None,
-                f"{product}.temperature.{forecast_code}[{term_index}]",
-            )
-            if triplet is None:
-                continue
-            non_null_regions += 1
-            for class15_code in recipes[forecast_code]:
-                resolved[class15_code] = {
-                    "forecast_region_code": forecast_code,
-                    "forecast_region_name": REGION_NAMES[forecast_code],
-                    "probabilities": triplet,
-                }
-        if len(resolved) != 376:
-            raise ValueError(f"{product} term {term_index} resolves {len(resolved)} class15 codes, expected 376")
-        terms.append({
-            **period,
-            "source_non_null_region_count": non_null_regions,
-            "resolved_class15_count": len(resolved),
-            "regions": resolved,
-        })
-
-    for element in ("precipitation", "sunshine", "snowfall"):
+    elements: dict[str, Any] = {}
+    for element in ELEMENTS:
         table = payload[element]
         if not isinstance(table, dict):
             raise ValueError(f"{product}.{element} must be an object")
-        for code, slots in table.items():
-            if not isinstance(slots, list) or len(slots) > 4:
-                raise ValueError(f"{product}.{element}.{code} must contain 0..4 slots")
-            for term_index in range(4):
-                normalize_triplet(slots[term_index] if term_index < len(slots) else None, f"{product}.{element}.{code}[{term_index}]")
+        elements[element] = build_element(product, element, table, periods, recipes)
 
-    end = parse_datetime(terms[0]["end"])
+    end = parse_datetime(periods[0]["end"])
     report = parse_datetime(payload["reportDatetime"])
     now = datetime.now(timezone.utc).astimezone(end.tzinfo)
     maximum_report_age_days = 9 if product == "P1M" else 45
@@ -262,7 +335,7 @@ def validate_product(product: str, payload: dict[str, Any], recipes: dict[str, l
             "maximum_report_age_days": maximum_report_age_days,
             "report_age_days_at_generation": round(report_age_days, 3),
         },
-        "terms": terms,
+        "elements": elements,
     }
 
 
@@ -369,6 +442,11 @@ def sanitize_regions(payload: dict[str, Any]) -> dict[str, Any]:
 def update(args: argparse.Namespace) -> dict[str, Any]:
     output_root = Path(args.output).resolve()
     manifest_path = output_root / "manifest.json"
+    staging_parent = output_root / ".staging"
+    try:
+        staging_parent.rmdir()
+    except OSError:
+        pass
     previous_manifest = None
     if manifest_path.is_file():
         previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -436,7 +514,6 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
                 current_manifest["changed"] = False
                 current_manifest["removed_dataset_ids"] = prune_datasets(output_root, dataset_id, args.keep_datasets)
                 return current_manifest
-    staging_parent = output_root / ".staging"
     staging_parent.mkdir(parents=True, exist_ok=True)
     staging_dir = Path(tempfile.mkdtemp(prefix=f"{dataset_id}-", dir=staging_parent))
     try:
@@ -448,7 +525,7 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
             "dataset_id": dataset_id,
             "generated_at": now_iso(),
             "fetched_at": fetched_at,
-            "element": {"code": "temperature", "name": "気温", "classes": ["低い", "平年並", "高い"]},
+            "elements": ELEMENTS,
             "products": products,
             "resolution_note": "季節予報は気象庁の地域単位。1kmメッシュへ補間していません。",
         }
@@ -487,7 +564,19 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
                     "status": products[product]["status"],
                     "report_datetime": products[product]["report_datetime"],
                     "target_datetime": products[product]["target_datetime"],
-                    "term_count": len(products[product]["terms"]),
+                    "elements": {
+                        element: {
+                            "status": products[product]["elements"][element]["status"],
+                            "supported": products[product]["elements"][element]["supported"],
+                            "unavailable_reason": products[product]["elements"][element]["unavailable_reason"],
+                            "term_count": len(products[product]["elements"][element]["terms"]),
+                            "available_term_count": sum(
+                                bool(term["regions"])
+                                for term in products[product]["elements"][element]["terms"]
+                            ),
+                        }
+                        for element in ELEMENTS
+                    },
                     "source_url": PRODUCT_URLS[product],
                     "source_sha256": source_hashes[product],
                     "etag": source_headers[product]["etag"],
@@ -510,7 +599,15 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
                 "unique_class15_codes": len(unique_codes),
                 "official_recipe_order": FORECAST_ORDER,
                 "probability_triplets_sum_to_100": True,
-                "resolved_class15_count_per_term": 376,
+                "resolved_class15_count_per_full_coverage_term": 376,
+                "snowfall_coverage": "officially_provided_regions_only",
+                "supported_terms": {
+                    product: {
+                        element: list(term_indices)
+                        for element, term_indices in elements.items()
+                    }
+                    for product, elements in SUPPORTED_TERMS.items()
+                },
                 "duplicate_geometry_codes_preserved": len(features) - len(unique_codes),
                 "dataset_retention": args.keep_datasets,
             },
@@ -533,6 +630,11 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
     finally:
         if staging_dir.exists():
             shutil.rmtree(staging_dir)
+        try:
+            staging_parent.rmdir()
+        except OSError:
+            # Keep a non-empty root only if another updater invocation owns it.
+            pass
 
 
 def parse_args() -> argparse.Namespace:

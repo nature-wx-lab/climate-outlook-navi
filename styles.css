@@ -87,6 +87,7 @@ button:disabled { cursor: wait; opacity: .58; }
 }
 h2 { margin: 0 0 8px; font-size: 14px; letter-spacing: .01em; }
 label { display: grid; gap: 4px; margin: 8px 0; color: #314b55; font-size: 12px; font-weight: 700; }
+label.control-disabled { opacity: .56; }
 select {
   width: 100%;
   min-height: 32px;
@@ -177,7 +178,9 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
 .legend-labels { display: flex; justify-content: space-between; gap: 6px; margin-top: 3px; color: #334952; font-size: 9px; font-weight: 800; }
 .climate-legend small { display: block; margin-top: 6px; color: var(--muted); font-size: 9px; }
 .season-keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.season-keys[hidden] { display: none; }
 .season-keys span { display: flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 800; }
+.season-keys b { font: inherit; }
 .season-keys i { width: 16px; height: 11px; border: 1px dashed #2e3940; opacity: .72; }
 .below i, .probability-grid .below { background: color-mix(in srgb, var(--below) 22%, white); }
 .normal i, .probability-grid .normal { background: color-mix(in srgb, var(--normal) 22%, white); }
@@ -186,6 +189,7 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
 .season-status { display: grid; gap: 2px; margin-top: 7px; color: #43575f; font-size: 9px; line-height: 1.35; }
 .season-status b { color: var(--ink); }
 .season-status small { color: var(--muted); }
+.season-status .unavailable { color: #8a4d15; font-weight: 800; }
 .climate-raster { image-rendering: pixelated; image-rendering: crisp-edges; }
 .leaflet-control-attribution { font-size: 8px; }
 .season-tooltip, .climate-tooltip { color: var(--ink); font-size: 11px; line-height: 1.35; }

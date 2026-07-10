@@ -9,7 +9,7 @@ import json
 import os
 import re
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +25,8 @@ TEXT_SUFFIXES = {
 FORBIDDEN_NAMES = {".DS_Store", ".env"}
 FORBIDDEN_PARTS = {
     ".cache", ".staging", ".venv", "__pycache__", "fixtures", "logs",
-    "node_modules", "outputs", "private", "screenshots", "state",
+    "node_modules", "outputs", "private", "screenshots", "state", "_site",
+    "_site_contract_test",
 }
 FORBIDDEN_SUFFIXES = {
     ".db", ".dmg", ".gz", ".heic", ".jpeg", ".jpg", ".key", ".log",
@@ -67,36 +68,69 @@ def git(root: Path, *args: str, text: bool = True) -> str | bytes:
     return subprocess.check_output(["git", "-C", str(root), *args], text=text)
 
 
-def manifest_binary_assets(raw: bytes) -> dict[str, set[str]]:
-    manifest = json.loads(raw.decode("utf-8"))
+def normalized_climate_binary_path(raw_path: object, inventory_path: str) -> str:
+    if not isinstance(raw_path, str) or "\\" in raw_path:
+        raise ValueError("climate binary path must be a forward-slash relative string")
+    path = PurePosixPath(raw_path)
+    if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
+        raise ValueError("climate binary path is unsafe")
+    if path.parts[:2] == ("data", "climate"):
+        public_path = path
+    else:
+        inventory = PurePosixPath(inventory_path)
+        if inventory.parts[:2] != ("data", "climate"):
+            raise ValueError("climate inventory path is outside data/climate")
+        base = PurePosixPath(*inventory.parts[2:]).parent
+        public_path = PurePosixPath("data/climate") / base / path
+    if public_path.suffix.lower() not in {".bin", ".webp"}:
+        raise ValueError("climate binary asset has an unexpected suffix")
+    if len(public_path.parts) < 4 or public_path.parts[2] not in {"chunks", "rasters", "elements"}:
+        raise ValueError("climate binary asset is outside generated asset directories")
+    return public_path.as_posix()
+
+
+def manifest_binary_assets(raw: bytes, inventory_path: str = "data/climate/manifest.json") -> dict[str, set[str]]:
+    payload = json.loads(raw.decode("utf-8"))
     assets: dict[str, set[str]] = {}
-    entries = [*manifest["chunks"].values()]
-    for group in manifest["rasters"]["files"].values():
-        entries.extend(group.values())
-    for entry in entries:
-        relative = entry.get("path")
-        checksum = entry.get("sha256")
-        if (
-            not isinstance(relative, str)
-            or "\\" in relative
-            or Path(relative).is_absolute()
-            or ".." in Path(relative).parts
-            or not isinstance(checksum, str)
-            or not re.fullmatch(r"[0-9a-f]{64}", checksum)
-        ):
-            raise ValueError("climate manifest contains an unsafe binary asset entry")
-        public_path = f"data/climate/{relative}"
-        if Path(public_path).suffix.lower() not in {".bin", ".webp"}:
-            raise ValueError("climate manifest binary asset has an unexpected suffix")
+
+    def add(relative: object, checksum: object) -> None:
+        if not isinstance(checksum, str) or not re.fullmatch(r"[0-9a-f]{64}", checksum):
+            raise ValueError("climate binary asset checksum is invalid")
+        public_path = normalized_climate_binary_path(relative, inventory_path)
         assets.setdefault(public_path, set()).add(checksum)
+
+    def walk(value: object) -> None:
+        if isinstance(value, dict):
+            relative = value.get("path")
+            checksum = value.get("sha256")
+            if isinstance(relative, str) and PurePosixPath(relative).suffix.lower() in {".bin", ".webp"}:
+                add(relative, checksum)
+            for key, nested in value.items():
+                if (
+                    isinstance(key, str)
+                    and PurePosixPath(key).suffix.lower() in {".bin", ".webp"}
+                    and isinstance(nested, dict)
+                ):
+                    add(key, nested.get("sha256"))
+                walk(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                walk(nested)
+
+    walk(payload)
     return assets
 
 
 def current_binary_assets(root: Path) -> dict[str, set[str]]:
     assets = {path: set(checksums) for path, checksums in STATIC_BINARY_ASSETS.items()}
-    manifest = root / "data/climate/manifest.json"
-    if manifest.is_file():
-        assets.update(manifest_binary_assets(manifest.read_bytes()))
+    climate_root = root / "data/climate"
+    if climate_root.is_dir() and not climate_root.is_symlink():
+        for inventory in sorted(climate_root.rglob("*.json")):
+            if inventory.is_symlink():
+                continue
+            inventory_path = inventory.relative_to(root).as_posix()
+            for path, checksums in manifest_binary_assets(inventory.read_bytes(), inventory_path).items():
+                assets.setdefault(path, set()).update(checksums)
     return assets
 
 
@@ -165,6 +199,13 @@ def scan_current_files(root: Path, denylist: tuple[str, ...]) -> tuple[list[tupl
         rel = path.relative_to(root)
         if ".git" in rel.parts:
             continue
+        forbidden_parts = [part for part in rel.parts if part in FORBIDDEN_PARTS]
+        if forbidden_parts:
+            if path.is_dir() and rel.name in FORBIDDEN_PARTS and not any(
+                part in FORBIDDEN_PARTS for part in rel.parts[:-1]
+            ):
+                findings.append((rel.as_posix(), 0, "forbidden-directory"))
+            continue
         if path.is_symlink():
             findings.append((rel.as_posix(), 0, "symlink"))
             continue
@@ -213,11 +254,15 @@ def scan_git_history(root: Path, denylist: tuple[str, ...]) -> tuple[list[tuple[
     allowed_assets = {path: set(checksums) for path, checksums in STATIC_BINARY_ASSETS.items()}
     for row in object_rows:
         object_id, name = row.split(" ", 1)
-        if name != "data/climate/manifest.json" or str(git(root, "cat-file", "-t", object_id)).strip() != "blob":
+        if (
+            not name.startswith("data/climate/")
+            or not name.endswith(".json")
+            or str(git(root, "cat-file", "-t", object_id)).strip() != "blob"
+        ):
             continue
         raw_manifest = git(root, "cat-file", "blob", object_id, text=False)
         assert isinstance(raw_manifest, bytes)
-        for path, checksums in manifest_binary_assets(raw_manifest).items():
+        for path, checksums in manifest_binary_assets(raw_manifest, name).items():
             allowed_assets.setdefault(path, set()).update(checksums)
 
     objects = 0

@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f7883'/%3E%3Cpath d='M17 44V20h7l16 15V20h7v24h-7L24 29v15z' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="./styles.css?v=20260710-mvp4b">
+  <link rel="stylesheet" href="./styles.css?v=20260710-elements1">
 </head>
 <body>
   <header class="topbar">
@@ -45,7 +45,7 @@
       <button id="settingsClose" class="panel-close" type="button" aria-label="設定を閉じる">×</button>
       <section>
         <h2>気候のものさし</h2>
-        <label>要素<select disabled><option>平均気温（第1段階）</option></select></label>
+        <label>要素<select id="elementSelect" aria-label="表示する気候要素"><option value="201">平均気温</option></select></label>
         <label>月・年<select id="monthSelect" aria-label="表示する月・年"></select></label>
         <div class="control-label">表示</div>
         <div class="segmented two" id="modeControls">
@@ -58,16 +58,16 @@
           <button class="active" data-window="1996_2025" type="button">1996–2025<br><small>最新30年・独自算出</small></button>
         </div>
         <label class="range-row">気候面の濃さ<input id="climateOpacity" type="range" min="25" max="100" value="86"></label>
-        <p class="micro-note">更新差は重複する2つの30年平均の差です。30年間の温暖化量そのものではありません。</p>
+        <p id="climateControlNote" class="micro-note">更新差は重複する2つの30年平均の差です。30年間の温暖化量そのものではありません。</p>
       </section>
 
       <section>
         <h2>この先の傾向</h2>
         <label class="check-row"><input id="forecastToggle" type="checkbox" checked><span>季節予報の地域を重ねる</span></label>
-        <label>予報<select id="forecastProduct"><option value="P1M">1か月予報・気温</option><option value="P3M">3か月予報・気温</option></select></label>
-        <label>対象期間<select id="forecastTerm"></select></label>
-        <label class="range-row">地域面の濃さ<input id="forecastOpacity" type="range" min="8" max="55" value="28"></label>
-        <p class="micro-note">色は地域内で最も確率が高い階級。確率値を気温へ足したり、1kmへ補間したりしません。</p>
+        <label id="forecastProductField">予報<select id="forecastProduct"><option value="P1M">1か月予報</option><option value="P3M">3か月予報</option></select></label>
+        <label id="forecastTermField">対象期間<select id="forecastTerm"></select></label>
+        <label id="forecastOpacityField" class="range-row">地域面の濃さ<input id="forecastOpacity" type="range" min="8" max="55" value="28"></label>
+        <p id="forecastControlNote" class="micro-note">色は地域内で最も確率が高い階級。確率値を気候平均へ足したり、1kmへ補間したりしません。</p>
       </section>
 
       <section>
@@ -103,7 +103,7 @@
 
       <aside id="seasonLegend" class="season-legend" aria-label="季節予報の凡例">
         <strong>季節予報・地域確率</strong>
-        <div class="season-keys"><span><i class="below"></i>低い</span><span><i class="normal"></i>平年並</span><span><i class="above"></i>高い</span><span><i class="tie"></i>同率首位</span></div>
+        <div id="seasonKeys" class="season-keys"><span><i class="below"></i><b id="seasonClassBelow">低い</b></span><span><i class="normal"></i><b id="seasonClassNormal">平年並</b></span><span><i class="above"></i><b id="seasonClassAbove">高い</b></span><span><i class="tie"></i><b>同率首位</b></span></div>
         <div id="seasonStatus" class="season-status">読み込み中</div>
       </aside>
 
@@ -131,9 +131,9 @@
         <strong id="forecastRegion">地域レイヤ上で地点をクリック</strong>
         <p id="forecastPeriod">対象期間を読み込み中</p>
         <div class="probability-grid">
-          <div class="below"><span>低い</span><b id="probabilityBelow">--</b></div>
-          <div class="normal"><span>平年並</span><b id="probabilityNormal">--</b></div>
-          <div class="above"><span>高い</span><b id="probabilityAbove">--</b></div>
+          <div class="below"><span id="probabilityBelowLabel">低い</span><b id="probabilityBelow">--</b></div>
+          <div class="normal"><span id="probabilityNormalLabel">平年並</span><b id="probabilityNormal">--</b></div>
+          <div class="above"><span id="probabilityAboveLabel">高い</span><b id="probabilityAbove">--</b></div>
         </div>
         <p id="forecastNote" class="micro-note">気候平均と季節予報は異なる空間単位です。</p>
       </section>
@@ -141,7 +141,7 @@
       <section class="reading-guide">
         <h2>読み方</h2>
         <ol>
-          <li>1km気候面で「いつも何℃くらいか」を見る</li>
+          <li>1km気候面で「いつもの値」を見る</li>
           <li>地域予報の3確率で「この先どちらへ傾きそうか」を見る</li>
           <li>確率は偏差量や地点の数値予報ではない</li>
         </ol>
@@ -154,6 +154,6 @@
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260710-mvp4b"></script>
+  <script type="module" src="./app.js?v=20260710-elements1"></script>
 </body>
 </html>

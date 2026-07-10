@@ -27,7 +27,7 @@ concurrency:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: write
     outputs:
@@ -106,7 +106,8 @@ jobs:
     if: needs.prepare.outputs.should_deploy == 'true'
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The all-element climate catalog is intentionally full-resolution.
+    timeout-minutes: 45
     permissions:
       contents: read
     outputs:
@@ -150,7 +151,7 @@ jobs:
     if: needs.build.result == 'success'
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
       pages: write
@@ -172,7 +173,8 @@ jobs:
     if: needs.deploy.result == 'success'
     needs: [build, deploy]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Verify every deployed catalog asset, not only the entry pages.
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:

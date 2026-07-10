@@ -10,7 +10,8 @@ permissions: {}
 jobs:
   privacy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Full-history scanning now covers every cataloged climate binary and raster.
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:

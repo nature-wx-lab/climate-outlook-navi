@@ -1,18 +1,18 @@
 {
-  "schema_version": 1,
-  "generator_version": "1.0.3",
-  "dataset_id": "bdb3d165a7b0fd70",
-  "generated_at": "2026-07-10T12:26:23+09:00",
-  "fetched_at": "2026-07-10T12:26:23+09:00",
+  "schema_version": 2,
+  "generator_version": "2.0.0",
+  "dataset_id": "2aeca8e4b600eeb2",
+  "generated_at": "2026-07-10T17:22:48+09:00",
+  "fetched_at": "2026-07-10T17:22:48+09:00",
   "status": "available",
   "files": {
     "latest": {
-      "path": "datasets/bdb3d165a7b0fd70/latest.json",
-      "bytes": 336427,
-      "sha256": "ec725305e311ef104df753db0450b044babf24242488fcf1424e1a102d5e005f"
+      "path": "datasets/2aeca8e4b600eeb2/latest.json",
+      "bytes": 593012,
+      "sha256": "52ab836501d7599084d6009637b2ba14a22d7c637b46644d85c414951923a789"
     },
     "regions": {
-      "path": "datasets/bdb3d165a7b0fd70/regions.geojson",
+      "path": "datasets/2aeca8e4b600eeb2/regions.geojson",
       "bytes": 417255,
       "sha256": "b3bff6c73e85b8c5161d7f9f9a5f0afa9fc6c3ad37c304370fd3b193f46ec35a",
       "feature_count": 385,
@@ -24,7 +24,36 @@
       "status": "available",
       "report_datetime": "2026-07-09T14:30:00+09:00",
       "target_datetime": "2026-07-11T00:00:00+09:00",
-      "term_count": 4,
+      "elements": {
+        "temperature": {
+          "status": "available",
+          "supported": true,
+          "unavailable_reason": null,
+          "term_count": 4,
+          "available_term_count": 4
+        },
+        "precipitation": {
+          "status": "available",
+          "supported": true,
+          "unavailable_reason": null,
+          "term_count": 1,
+          "available_term_count": 1
+        },
+        "sunshine": {
+          "status": "available",
+          "supported": true,
+          "unavailable_reason": null,
+          "term_count": 1,
+          "available_term_count": 1
+        },
+        "snowfall": {
+          "status": "unavailable",
+          "supported": true,
+          "unavailable_reason": "seasonal_not_issued",
+          "term_count": 1,
+          "available_term_count": 0
+        }
+      },
       "source_url": "https://www.jma.go.jp/bosai/season/data/P1M.json",
       "source_sha256": "6f090b8b541b73be04ee2c8062ff6548a71f27dee1de52055761a205b14081b7",
       "etag": "\"15f51cbcfdc23cbb57396053516c1460\"",
@@ -34,7 +63,36 @@
       "status": "available",
       "report_datetime": "2026-06-23T14:00:00+09:00",
       "target_datetime": "2026-07-01T00:00:00+09:00",
-      "term_count": 4,
+      "elements": {
+        "temperature": {
+          "status": "available",
+          "supported": true,
+          "unavailable_reason": null,
+          "term_count": 4,
+          "available_term_count": 4
+        },
+        "precipitation": {
+          "status": "available",
+          "supported": true,
+          "unavailable_reason": null,
+          "term_count": 4,
+          "available_term_count": 4
+        },
+        "sunshine": {
+          "status": "unavailable",
+          "supported": false,
+          "unavailable_reason": "not_supported_by_product",
+          "term_count": 0,
+          "available_term_count": 0
+        },
+        "snowfall": {
+          "status": "unavailable",
+          "supported": true,
+          "unavailable_reason": "seasonal_not_issued",
+          "term_count": 1,
+          "available_term_count": 0
+        }
+      },
       "source_url": "https://www.jma.go.jp/bosai/season/data/P3M.json",
       "source_sha256": "aa0461ec2d437718929947a8c3e300e426ee11ab862de670613412d496ed9206",
       "etag": "\"72574f522666867a2eba483e7a6fc6f3\"",
@@ -81,7 +139,45 @@
       "011100"
     ],
     "probability_triplets_sum_to_100": true,
-    "resolved_class15_count_per_term": 376,
+    "resolved_class15_count_per_full_coverage_term": 376,
+    "snowfall_coverage": "officially_provided_regions_only",
+    "supported_terms": {
+      "P1M": {
+        "temperature": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "precipitation": [
+          0
+        ],
+        "sunshine": [
+          0
+        ],
+        "snowfall": [
+          0
+        ]
+      },
+      "P3M": {
+        "temperature": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "precipitation": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "sunshine": [],
+        "snowfall": [
+          0
+        ]
+      }
+    },
     "duplicate_geometry_codes_preserved": 9,
     "dataset_retention": 2
   }

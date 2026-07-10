@@ -1,0 +1,2041 @@
+{
+  "schema_version": 2,
+  "generator_version": "2.0.1",
+  "dataset_id": "climate-baseline-101-2e3f01e5e7e07072",
+  "generated_at": "2026-07-10T17:18:26+09:00",
+  "source": {
+    "logical_database_id": "naturewxlab-climate-foundation-db",
+    "database_version": "v2.9",
+    "master_logical_id": "climate-mesh-1km/master",
+    "master_sha256": "97725d633cca4e856781d7a07b64a09dde2b0183375096573603096f4e058e27",
+    "source_audit": {
+      "1991_2020": {
+        "file": "mesh1km_101_1991_2020.csv.gz",
+        "sha256": "fcfd568523d80fb91fba6d762bc79dbae87663a68ad20e6f42cdb1eeb31d28d1",
+        "row_count": 5040321,
+        "month_counts": {
+          "1": 387717,
+          "2": 387717,
+          "3": 387717,
+          "4": 387717,
+          "5": 387717,
+          "6": 387717,
+          "7": 387717,
+          "8": 387717,
+          "9": 387717,
+          "10": 387717,
+          "11": 387717,
+          "12": 387717,
+          "13": 387717
+        },
+        "min": {
+          "1": 18.88,
+          "2": 14.37,
+          "3": 21.54,
+          "4": 31.02,
+          "5": 51.9,
+          "6": 44.25,
+          "7": 79.53,
+          "8": 78.34,
+          "9": 94.07,
+          "10": 69.8,
+          "11": 37.21,
+          "12": 20.85,
+          "13": 710.75
+        },
+        "max": {
+          "1": 452.49,
+          "2": 307.95,
+          "3": 385.23,
+          "4": 451.91,
+          "5": 444.0,
+          "6": 999.35,
+          "7": 852.97,
+          "8": 690.27,
+          "9": 743.48,
+          "10": 507.4,
+          "11": 403.83,
+          "12": 496.06,
+          "13": 4646.02
+        },
+        "max_quantization_error": 0.0
+      },
+      "1996_2025": {
+        "file": "mesh1km_101_1996_2025.csv.gz",
+        "sha256": "b710c80489c13192a6663da1ae5df75ebb219a3eb2c0eab477b03988498b69e8",
+        "row_count": 5040321,
+        "month_counts": {
+          "1": 387717,
+          "2": 387717,
+          "3": 387717,
+          "4": 387717,
+          "5": 387717,
+          "6": 387717,
+          "7": 387717,
+          "8": 387717,
+          "9": 387717,
+          "10": 387717,
+          "11": 387717,
+          "12": 387717,
+          "13": 387717
+        },
+        "min": {
+          "1": 17.82,
+          "2": 12.95,
+          "3": 21.88,
+          "4": 35.64,
+          "5": 52.2,
+          "6": 51.93,
+          "7": 85.34,
+          "8": 85.97,
+          "9": 97.2,
+          "10": 69.71,
+          "11": 37.72,
+          "12": 21.3,
+          "13": 696.21
+        },
+        "max": {
+          "1": 470.77,
+          "2": 292.05,
+          "3": 397.17,
+          "4": 472.48,
+          "5": 468.14,
+          "6": 938.75,
+          "7": 834.2,
+          "8": 706.07,
+          "9": 721.98,
+          "10": 485.27,
+          "11": 411.52,
+          "12": 524.75,
+          "13": 4616.74
+        },
+        "max_quantization_error": 0.0
+      }
+    }
+  },
+  "element": {
+    "code": "101",
+    "name": "降水量合計",
+    "short_name": "降水量",
+    "definition": "月または年の降水量合計",
+    "unit": "mm",
+    "decimal_places": 2,
+    "value_scale": 100,
+    "nodata": 4294967295,
+    "annual": {
+      "available": true,
+      "label": "年降水量・年合計",
+      "definition": "12か月の降水量の年合計",
+      "derived_from_monthly_grid": false
+    },
+    "forecast_element": "precipitation",
+    "quality_note": "季節予報は地域平均の3階級確率であり、この1km値へ加算しません。"
+  },
+  "windows": [
+    {
+      "id": "1991_2020",
+      "label": "1991–2020年平均（独自算出・気象庁平年期間）"
+    },
+    {
+      "id": "1996_2025",
+      "label": "1996–2025年平均（独自算出）"
+    }
+  ],
+  "months": [
+    {
+      "id": 1,
+      "label": "1月"
+    },
+    {
+      "id": 2,
+      "label": "2月"
+    },
+    {
+      "id": 3,
+      "label": "3月"
+    },
+    {
+      "id": 4,
+      "label": "4月"
+    },
+    {
+      "id": 5,
+      "label": "5月"
+    },
+    {
+      "id": 6,
+      "label": "6月"
+    },
+    {
+      "id": 7,
+      "label": "7月"
+    },
+    {
+      "id": 8,
+      "label": "8月"
+    },
+    {
+      "id": 9,
+      "label": "9月"
+    },
+    {
+      "id": 10,
+      "label": "10月"
+    },
+    {
+      "id": 11,
+      "label": "11月"
+    },
+    {
+      "id": 12,
+      "label": "12月"
+    },
+    {
+      "id": 13,
+      "label": "年降水量・年合計"
+    }
+  ],
+  "mesh_count": 387717,
+  "mesh_unique_count": 387717,
+  "value_count": 10080642,
+  "chunk_format": {
+    "magic": "NWCBCH2",
+    "version": 2,
+    "header_bytes": 28,
+    "layout": "codes[u32], lat[f32], lon[f32], values[uint32 window-major/month-major]",
+    "dtype": "uint32",
+    "dtype_code": 3,
+    "value_scale": 100,
+    "nodata": 4294967295,
+    "window_order": [
+      "1991_2020",
+      "1996_2025"
+    ],
+    "month_order": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ]
+  },
+  "chunks": {
+    "3036": {
+      "path": "chunks/mesh_3036.bin",
+      "count": 1,
+      "first_mesh_code": "30365015",
+      "last_mesh_code": "30365015",
+      "bytes": 144,
+      "sha256": "8b0bf8565608e80b5a85cb5fdefc4457ec40e2fb29dcecf80ac5f98730a0b176"
+    },
+    "3622": {
+      "path": "chunks/mesh_3622.bin",
+      "count": 25,
+      "first_mesh_code": "36225726",
+      "last_mesh_code": "36225769",
+      "bytes": 2928,
+      "sha256": "56923126fe8dbb9cb050492a154d4007c36b02993a862bc3725fb784d4a88274"
+    },
+    "3623": {
+      "path": "chunks/mesh_3623.bin",
+      "count": 402,
+      "first_mesh_code": "36230650",
+      "last_mesh_code": "36235675",
+      "bytes": 46660,
+      "sha256": "a9371453c669ebeea811c62148bfbc06ce76a6c7a234fab6b99118a478f06dab"
+    },
+    "3624": {
+      "path": "chunks/mesh_3624.bin",
+      "count": 327,
+      "first_mesh_code": "36242060",
+      "last_mesh_code": "36247598",
+      "bytes": 37960,
+      "sha256": "8dcb3e4bf64efb65ae801821a295e40a18b973508bbe588028c1c6adec49e3d0"
+    },
+    "3631": {
+      "path": "chunks/mesh_3631.bin",
+      "count": 4,
+      "first_mesh_code": "36315154",
+      "last_mesh_code": "36315165",
+      "bytes": 492,
+      "sha256": "2a5f41aaff58f642ef4006613b2dba24d1f506ac37884889befdaebee7bc4898"
+    },
+    "3641": {
+      "path": "chunks/mesh_3641.bin",
+      "count": 7,
+      "first_mesh_code": "36412366",
+      "last_mesh_code": "36412397",
+      "bytes": 840,
+      "sha256": "8c720870ec38ce1b2e78f6323646416320d9f31dbfe9eef09ec91699a7d4d235"
+    },
+    "3653": {
+      "path": "chunks/mesh_3653.bin",
+      "count": 4,
+      "first_mesh_code": "36533738",
+      "last_mesh_code": "36533758",
+      "bytes": 492,
+      "sha256": "c684b979d86c1551355223fcbe0b2399a97b4280b47e5f687de939b51d686ece"
+    },
+    "3724": {
+      "path": "chunks/mesh_3724.bin",
+      "count": 15,
+      "first_mesh_code": "37240503",
+      "last_mesh_code": "37241515",
+      "bytes": 1768,
+      "sha256": "51cb392ade6ed64ce8a69b84e1888b60cc0d9de034566fe787f039ac5c0ef4e5"
+    },
+    "3725": {
+      "path": "chunks/mesh_3725.bin",
+      "count": 263,
+      "first_mesh_code": "37250159",
+      "last_mesh_code": "37253278",
+      "bytes": 30536,
+      "sha256": "257c07d80ce452a8710fea72c9046c7a8c308cbab38874adffc4cd134708a4a4"
+    },
+    "3741": {
+      "path": "chunks/mesh_3741.bin",
+      "count": 39,
+      "first_mesh_code": "37410292",
+      "last_mesh_code": "37411276",
+      "bytes": 4552,
+      "sha256": "fd9f2d36c8509b42279474ee4e0f21328b824692c936916888957d45d9c4d040"
+    },
+    "3823": {
+      "path": "chunks/mesh_3823.bin",
+      "count": 22,
+      "first_mesh_code": "38234386",
+      "last_mesh_code": "38237515",
+      "bytes": 2580,
+      "sha256": "2c5bd4b8fb0d481aabb4ccd44c79d6230a8dd7894b991dd22b556d34a0a75a53"
+    },
+    "3824": {
+      "path": "chunks/mesh_3824.bin",
+      "count": 1,
+      "first_mesh_code": "38247404",
+      "last_mesh_code": "38247404",
+      "bytes": 144,
+      "sha256": "760bbeb9f3c9b04caa748c103f116de2c523ae9159d6b9260471494bca72abb1"
+    },
+    "3831": {
+      "path": "chunks/mesh_3831.bin",
+      "count": 58,
+      "first_mesh_code": "38315177",
+      "last_mesh_code": "38317253",
+      "bytes": 6756,
+      "sha256": "6b97325f8e53c3cb64b7ea05c4fd7c0ea43ad684f5944753d26d48387c9f46e0"
+    },
+    "3841": {
+      "path": "chunks/mesh_3841.bin",
+      "count": 12,
+      "first_mesh_code": "38411201",
+      "last_mesh_code": "38411233",
+      "bytes": 1420,
+      "sha256": "28a967e4ae958dbe2bc03f3166b1fbe2b4a4648feaccfe2012ed1382803c6958"
+    },
+    "3926": {
+      "path": "chunks/mesh_3926.bin",
+      "count": 91,
+      "first_mesh_code": "39263599",
+      "last_mesh_code": "39267616",
+      "bytes": 10584,
+      "sha256": "30a701b54e0ff93c13558c08749a227783932805ce5cc27002f8d57c639a895d"
+    },
+    "3927": {
+      "path": "chunks/mesh_3927.bin",
+      "count": 985,
+      "first_mesh_code": "39270584",
+      "last_mesh_code": "39277799",
+      "bytes": 114288,
+      "sha256": "ef88a4c5791e0b06f5b6223b8b827ef1fd630c4e53e8eeebbf80f3b658821549"
+    },
+    "3928": {
+      "path": "chunks/mesh_3928.bin",
+      "count": 255,
+      "first_mesh_code": "39284060",
+      "last_mesh_code": "39287291",
+      "bytes": 29608,
+      "sha256": "68206932d6dc20d29e21acdf3fcf02fbbdccc919a2fcbbaa8316901c545e86f9"
+    },
+    "3942": {
+      "path": "chunks/mesh_3942.bin",
+      "count": 58,
+      "first_mesh_code": "39426142",
+      "last_mesh_code": "39427195",
+      "bytes": 6756,
+      "sha256": "6ae599f7a8f72ebaa90534ec80a7b825150a4c934043609b28c4f6c31f6fad9e"
+    },
+    "4027": {
+      "path": "chunks/mesh_4027.bin",
+      "count": 163,
+      "first_mesh_code": "40270569",
+      "last_mesh_code": "40275719",
+      "bytes": 18936,
+      "sha256": "0cb02a6d6df2539fa5546798832595e82052e192db192997696790d5c5bbe5b1"
+    },
+    "4028": {
+      "path": "chunks/mesh_4028.bin",
+      "count": 327,
+      "first_mesh_code": "40280000",
+      "last_mesh_code": "40287496",
+      "bytes": 37960,
+      "sha256": "9a717ba9a823c309f3a7f4818f5bb62b50dac39c3cb1924fc9b2707c42e36946"
+    },
+    "4040": {
+      "path": "chunks/mesh_4040.bin",
+      "count": 4,
+      "first_mesh_code": "40406699",
+      "last_mesh_code": "40407700",
+      "bytes": 492,
+      "sha256": "9a71c2d516313cdb92d573f2a4fe9ecf88214a73a39fa96aed46bf06e6410b68"
+    },
+    "4042": {
+      "path": "chunks/mesh_4042.bin",
+      "count": 117,
+      "first_mesh_code": "40420049",
+      "last_mesh_code": "40426135",
+      "bytes": 13600,
+      "sha256": "c7265f519b8d1e304dd0c75582e57002c591ee515a4e7b9157c48187d9a14afa"
+    },
+    "4128": {
+      "path": "chunks/mesh_4128.bin",
+      "count": 358,
+      "first_mesh_code": "41280403",
+      "last_mesh_code": "41287709",
+      "bytes": 41556,
+      "sha256": "fa60ba4b48f7aebbe13ee4f327fc6c1467667355eebf6230fd593f2d31947d71"
+    },
+    "4129": {
+      "path": "chunks/mesh_4129.bin",
+      "count": 35,
+      "first_mesh_code": "41294020",
+      "last_mesh_code": "41297290",
+      "bytes": 4088,
+      "sha256": "6e2494096729c59df7cc13f7b1b655a03229d6a34e43cb8d1f8d50a7f7e7246d"
+    },
+    "4142": {
+      "path": "chunks/mesh_4142.bin",
+      "count": 37,
+      "first_mesh_code": "41421186",
+      "last_mesh_code": "41424160",
+      "bytes": 4320,
+      "sha256": "7ccb5b6011692e2550ada74a2df5658d9f6e72d61723d493bc2213f5c816494f"
+    },
+    "4229": {
+      "path": "chunks/mesh_4229.bin",
+      "count": 1102,
+      "first_mesh_code": "42290111",
+      "last_mesh_code": "42296557",
+      "bytes": 127860,
+      "sha256": "8bd7b5f4fb2f178a9d378498cb05b9620696e601a7a25e39c74cb5aacea232a7"
+    },
+    "4230": {
+      "path": "chunks/mesh_4230.bin",
+      "count": 19,
+      "first_mesh_code": "42303080",
+      "last_mesh_code": "42304052",
+      "bytes": 2232,
+      "sha256": "fa9c94be990a2b3fa8a744e45b418617d8f2cf7d5ebf3d3a0fc0c02e542edfe4"
+    },
+    "4328": {
+      "path": "chunks/mesh_4328.bin",
+      "count": 9,
+      "first_mesh_code": "43281749",
+      "last_mesh_code": "43282709",
+      "bytes": 1072,
+      "sha256": "749ddc335c5e9571dfe9bf7ecd17feaa86cfd6261f1c221ac58fd53f6b75a1d2"
+    },
+    "4329": {
+      "path": "chunks/mesh_4329.bin",
+      "count": 28,
+      "first_mesh_code": "43291050",
+      "last_mesh_code": "43296279",
+      "bytes": 3276,
+      "sha256": "e377f8b5a45959a6ddca5ea40b14c754d4f29deedc996029dd4afc75e787c58a"
+    },
+    "4429": {
+      "path": "chunks/mesh_4429.bin",
+      "count": 147,
+      "first_mesh_code": "44291437",
+      "last_mesh_code": "44297793",
+      "bytes": 17080,
+      "sha256": "88fe763005523157a1284c17f175474af09fb3897fb8fd69f8c60914f10c3604"
+    },
+    "4440": {
+      "path": "chunks/mesh_4440.bin",
+      "count": 1,
+      "first_mesh_code": "44405257",
+      "last_mesh_code": "44405257",
+      "bytes": 144,
+      "sha256": "afef77851ee890fd6cf79731b5c9889dd79a48e2de58c2f0c50285fb3097399b"
+    },
+    "4529": {
+      "path": "chunks/mesh_4529.bin",
+      "count": 3,
+      "first_mesh_code": "45290702",
+      "last_mesh_code": "45290713",
+      "bytes": 376,
+      "sha256": "2726b53286af306b6a74f647ab1e8cb699fb0434a4cc8cf5a098a201b6de870a"
+    },
+    "4530": {
+      "path": "chunks/mesh_4530.bin",
+      "count": 856,
+      "first_mesh_code": "45300044",
+      "last_mesh_code": "45307799",
+      "bytes": 99324,
+      "sha256": "30edd79336d05740665535610aebf0f5882e7932e4a863a1841dbe07b07f4bdf"
+    },
+    "4531": {
+      "path": "chunks/mesh_4531.bin",
+      "count": 66,
+      "first_mesh_code": "45316050",
+      "last_mesh_code": "45317094",
+      "bytes": 7684,
+      "sha256": "34faab6764fb7de73fab4e04073723c9432d00d376b0e47d04b059ae887cd069"
+    },
+    "4540": {
+      "path": "chunks/mesh_4540.bin",
+      "count": 12,
+      "first_mesh_code": "45405263",
+      "last_mesh_code": "45405294",
+      "bytes": 1420,
+      "sha256": "9008dc75df492650dae5493baa0c771a5847b48962bf6ee89e4c8147a360787c"
+    },
+    "4629": {
+      "path": "chunks/mesh_4629.bin",
+      "count": 59,
+      "first_mesh_code": "46291393",
+      "last_mesh_code": "46297579",
+      "bytes": 6872,
+      "sha256": "ea543d0498dd8e33bb87d189c356adf41bf75a94eaa640f41ed34db54c1e6dbc"
+    },
+    "4630": {
+      "path": "chunks/mesh_4630.bin",
+      "count": 1199,
+      "first_mesh_code": "46300098",
+      "last_mesh_code": "46307799",
+      "bytes": 139112,
+      "sha256": "57d43e7565d95ec84a3c5a8e74bff5809f610fcd2555b2b1b7815d19656b069d"
+    },
+    "4631": {
+      "path": "chunks/mesh_4631.bin",
+      "count": 244,
+      "first_mesh_code": "46310000",
+      "last_mesh_code": "46317140",
+      "bytes": 28332,
+      "sha256": "d645c70eb1bf1d61888df093c12e2e7f15faa524425dfbbc294d35167e8ee810"
+    },
+    "4728": {
+      "path": "chunks/mesh_4728.bin",
+      "count": 5,
+      "first_mesh_code": "47287268",
+      "last_mesh_code": "47287298",
+      "bytes": 608,
+      "sha256": "e26b3bb23a9f120ed5239d9ecc634ba718eb0648d995b945f794f4afefe98b37"
+    },
+    "4729": {
+      "path": "chunks/mesh_4729.bin",
+      "count": 212,
+      "first_mesh_code": "47291528",
+      "last_mesh_code": "47296746",
+      "bytes": 24620,
+      "sha256": "60097ea01096ab444b7e0d6db1b1e63c1cb53b8ed96858d5b837d1e932926114"
+    },
+    "4730": {
+      "path": "chunks/mesh_4730.bin",
+      "count": 4369,
+      "first_mesh_code": "47300088",
+      "last_mesh_code": "47307799",
+      "bytes": 506832,
+      "sha256": "b29e64060a0795fb9736d215f489f8fc1d3d25ef85ce77a1fe17aebf919b266d"
+    },
+    "4731": {
+      "path": "chunks/mesh_4731.bin",
+      "count": 2583,
+      "first_mesh_code": "47310000",
+      "last_mesh_code": "47317399",
+      "bytes": 299656,
+      "sha256": "b191121b9bc047f3669ebdb2599967dda2cfd6712a57ec5868d8c8b94650bbc5"
+    },
+    "4739": {
+      "path": "chunks/mesh_4739.bin",
+      "count": 1,
+      "first_mesh_code": "47396763",
+      "last_mesh_code": "47396763",
+      "bytes": 144,
+      "sha256": "9d67c8323376bc960cd7ee28af92888a380fe9e953a30f12b5e7b3582869a478"
+    },
+    "4740": {
+      "path": "chunks/mesh_4740.bin",
+      "count": 1,
+      "first_mesh_code": "47401024",
+      "last_mesh_code": "47401024",
+      "bytes": 144,
+      "sha256": "f14c81652b0464dad721cb9ac981311a9a24f85d1aede9c14175f6d39cb32dd9"
+    },
+    "4828": {
+      "path": "chunks/mesh_4828.bin",
+      "count": 219,
+      "first_mesh_code": "48280207",
+      "last_mesh_code": "48287790",
+      "bytes": 25432,
+      "sha256": "cd256e89b318bdf0b278826e0714dfd662135b657c97dff8ed4bba3620aae688"
+    },
+    "4829": {
+      "path": "chunks/mesh_4829.bin",
+      "count": 153,
+      "first_mesh_code": "48291777",
+      "last_mesh_code": "48297791",
+      "bytes": 17776,
+      "sha256": "1c6add7335d923b380c2e3e9d673d5f5c8053cb59066ae3a66b98e75483fd662"
+    },
+    "4830": {
+      "path": "chunks/mesh_4830.bin",
+      "count": 5060,
+      "first_mesh_code": "48300104",
+      "last_mesh_code": "48307799",
+      "bytes": 586988,
+      "sha256": "0ce235e8084532292290ff0c3cb26762204e20dab24d1fa83c12efd7b16139d5"
+    },
+    "4831": {
+      "path": "chunks/mesh_4831.bin",
+      "count": 4061,
+      "first_mesh_code": "48310000",
+      "last_mesh_code": "48317696",
+      "bytes": 471104,
+      "sha256": "3f86f9a278fb29e49a3e912abd69df243b84fb87bff55957e1e4de08d443dc97"
+    },
+    "4839": {
+      "path": "chunks/mesh_4839.bin",
+      "count": 11,
+      "first_mesh_code": "48395630",
+      "last_mesh_code": "48395661",
+      "bytes": 1304,
+      "sha256": "962a510883259ca0d905fc240f69fa44978a8855ace5d608d4f338714ccb530c"
+    },
+    "4928": {
+      "path": "chunks/mesh_4928.bin",
+      "count": 482,
+      "first_mesh_code": "49280409",
+      "last_mesh_code": "49286754",
+      "bytes": 55940,
+      "sha256": "079ab78103e130a3304cb02e3112d45de94738b701b79e9a38713fc0d40b2982"
+    },
+    "4929": {
+      "path": "chunks/mesh_4929.bin",
+      "count": 2717,
+      "first_mesh_code": "49290090",
+      "last_mesh_code": "49297799",
+      "bytes": 315200,
+      "sha256": "59cca5bdfa6243446af15817965664806a7a53aa02b382169680964f515d02cf"
+    },
+    "4930": {
+      "path": "chunks/mesh_4930.bin",
+      "count": 5203,
+      "first_mesh_code": "49300100",
+      "last_mesh_code": "49307799",
+      "bytes": 603576,
+      "sha256": "cbd608ad43a903cda089243b98cf24af520cd864e53f7c4eb801a8770ef5a3ad"
+    },
+    "4931": {
+      "path": "chunks/mesh_4931.bin",
+      "count": 5727,
+      "first_mesh_code": "49310000",
+      "last_mesh_code": "49317744",
+      "bytes": 664360,
+      "sha256": "1e358545d1113a71fb22c0581a7a8b26c2da8efcfc304eeb59edb90358171ee4"
+    },
+    "4932": {
+      "path": "chunks/mesh_4932.bin",
+      "count": 2925,
+      "first_mesh_code": "49320388",
+      "last_mesh_code": "49327799",
+      "bytes": 339328,
+      "sha256": "7213c0a4ee0cfda28bd0d236f6062dd6fddfe2108ebc4c746ebf71cfd6780da6"
+    },
+    "4933": {
+      "path": "chunks/mesh_4933.bin",
+      "count": 647,
+      "first_mesh_code": "49330060",
+      "last_mesh_code": "49337295",
+      "bytes": 75080,
+      "sha256": "352a4a4cc48efce0ac6bd3309c82954680a554732ba95b764c11dd75dd99c672"
+    },
+    "4934": {
+      "path": "chunks/mesh_4934.bin",
+      "count": 65,
+      "first_mesh_code": "49346184",
+      "last_mesh_code": "49347196",
+      "bytes": 7568,
+      "sha256": "f04928653298da1cb5aa5c083abccacdab87c553e00ef9ee236dc2eeaa2e06e2"
+    },
+    "4939": {
+      "path": "chunks/mesh_4939.bin",
+      "count": 95,
+      "first_mesh_code": "49394656",
+      "last_mesh_code": "49395691",
+      "bytes": 11048,
+      "sha256": "afcc5a053842b723cc0b7b296825b543508e279fe7abd4d590ff644fd73b041e"
+    },
+    "5029": {
+      "path": "chunks/mesh_5029.bin",
+      "count": 948,
+      "first_mesh_code": "50290305",
+      "last_mesh_code": "50296611",
+      "bytes": 109996,
+      "sha256": "316a9b73a302e7ad75c6ac06b8646668bab18d7de8c22fce3561fcb36a6db8fb"
+    },
+    "5030": {
+      "path": "chunks/mesh_5030.bin",
+      "count": 4399,
+      "first_mesh_code": "50300000",
+      "last_mesh_code": "50307799",
+      "bytes": 510312,
+      "sha256": "b22d68ed1004a065f11434271e811d3b3e064ff29303c4e7ee72a27f10dbdb4e"
+    },
+    "5031": {
+      "path": "chunks/mesh_5031.bin",
+      "count": 2489,
+      "first_mesh_code": "50310000",
+      "last_mesh_code": "50317799",
+      "bytes": 288752,
+      "sha256": "49bef78ea9cad835119a51a1e9a82ebccea3bd3737ca980c59f6aa834bce3178"
+    },
+    "5032": {
+      "path": "chunks/mesh_5032.bin",
+      "count": 3705,
+      "first_mesh_code": "50320000",
+      "last_mesh_code": "50327799",
+      "bytes": 429808,
+      "sha256": "6786a633d6c85a386aa54327bb56ba4913ac2874a98259d23a899401d68e0db1"
+    },
+    "5033": {
+      "path": "chunks/mesh_5033.bin",
+      "count": 5381,
+      "first_mesh_code": "50330000",
+      "last_mesh_code": "50337799",
+      "bytes": 624224,
+      "sha256": "b41bc094ec71f4de7543c9d364fb3121e92f2bd27660642004e773e0224a76db"
+    },
+    "5034": {
+      "path": "chunks/mesh_5034.bin",
+      "count": 3042,
+      "first_mesh_code": "50340006",
+      "last_mesh_code": "50347591",
+      "bytes": 352900,
+      "sha256": "7e1c21aa30bdf2801893c84488ac1fc632c5b46d379b5ab33e24a5db0c25f499"
+    },
+    "5035": {
+      "path": "chunks/mesh_5035.bin",
+      "count": 3533,
+      "first_mesh_code": "50351496",
+      "last_mesh_code": "50357799",
+      "bytes": 409856,
+      "sha256": "221633bc2f70db66b97a4808a5d2e457a849fabc7c1010fb760cef438e230dac"
+    },
+    "5036": {
+      "path": "chunks/mesh_5036.bin",
+      "count": 344,
+      "first_mesh_code": "50364050",
+      "last_mesh_code": "50367291",
+      "bytes": 39932,
+      "sha256": "7bcb5585655ca78d065662d81fe5c49013367f000a2a42a2162589438886e7e8"
+    },
+    "5038": {
+      "path": "chunks/mesh_5038.bin",
+      "count": 3,
+      "first_mesh_code": "50387635",
+      "last_mesh_code": "50387657",
+      "bytes": 376,
+      "sha256": "10e31e66bf484fd8967f3561a52b232ea1b2f35fc1c169a1abe4c98c01f75405"
+    },
+    "5039": {
+      "path": "chunks/mesh_5039.bin",
+      "count": 32,
+      "first_mesh_code": "50393283",
+      "last_mesh_code": "50396560",
+      "bytes": 3740,
+      "sha256": "01a1676ad5d914de06da38fa21f80c863e61ee7cedac5e4189f2ff5af1b4f61c"
+    },
+    "5129": {
+      "path": "chunks/mesh_5129.bin",
+      "count": 862,
+      "first_mesh_code": "51291107",
+      "last_mesh_code": "51297399",
+      "bytes": 100020,
+      "sha256": "5566690d1fd3e31fb13891c194372bab4f154cace1870a0c9fc6f90f79524649"
+    },
+    "5130": {
+      "path": "chunks/mesh_5130.bin",
+      "count": 476,
+      "first_mesh_code": "51300506",
+      "last_mesh_code": "51305737",
+      "bytes": 55244,
+      "sha256": "519c789abd335323bab359e63b722b57b5f9e4789f2c8d482596938551f3e511"
+    },
+    "5131": {
+      "path": "chunks/mesh_5131.bin",
+      "count": 5199,
+      "first_mesh_code": "51310000",
+      "last_mesh_code": "51317799",
+      "bytes": 603112,
+      "sha256": "253f662ad4225967edad782af09d97e551f14eaf2af6a83ec5a64d134bffb899"
+    },
+    "5132": {
+      "path": "chunks/mesh_5132.bin",
+      "count": 5232,
+      "first_mesh_code": "51320000",
+      "last_mesh_code": "51327799",
+      "bytes": 606940,
+      "sha256": "b71393cc17b383649663bece0e271bf3c8dc0f4ca4625c72ffbff034b374eee4"
+    },
+    "5133": {
+      "path": "chunks/mesh_5133.bin",
+      "count": 4270,
+      "first_mesh_code": "51330000",
+      "last_mesh_code": "51337799",
+      "bytes": 495348,
+      "sha256": "a2a6521bfbdd3048029e6fbf8a749296612c9b30270ce054e01b0a683d180904"
+    },
+    "5134": {
+      "path": "chunks/mesh_5134.bin",
+      "count": 3026,
+      "first_mesh_code": "51340000",
+      "last_mesh_code": "51347799",
+      "bytes": 351044,
+      "sha256": "33dc5852885e66dcc5f12415b2aa8af3d8105b5377871f9d35e7d795d9a42c3c"
+    },
+    "5135": {
+      "path": "chunks/mesh_5135.bin",
+      "count": 5117,
+      "first_mesh_code": "51350006",
+      "last_mesh_code": "51357799",
+      "bytes": 593600,
+      "sha256": "3dec680f9458fa715e4cffe255fda2c777b3d5c6ac2c06ed4b9c3b60be0dc0ae"
+    },
+    "5136": {
+      "path": "chunks/mesh_5136.bin",
+      "count": 4069,
+      "first_mesh_code": "51360000",
+      "last_mesh_code": "51367799",
+      "bytes": 472032,
+      "sha256": "bf352111cd0cfe92f668761861bc01b6cab3d7a749db30787a247aa959b1e0ca"
+    },
+    "5137": {
+      "path": "chunks/mesh_5137.bin",
+      "count": 238,
+      "first_mesh_code": "51376082",
+      "last_mesh_code": "51377799",
+      "bytes": 27636,
+      "sha256": "41ae3c55dd0adc4ff02998de34bb27c30d281f35fa6f413605ce8231ef3fa6d6"
+    },
+    "5138": {
+      "path": "chunks/mesh_5138.bin",
+      "count": 193,
+      "first_mesh_code": "51386785",
+      "last_mesh_code": "51387799",
+      "bytes": 22416,
+      "sha256": "04799bb779ced62305865181ee1308bd2e2cf81a929587997fa70c911ef0f7b8"
+    },
+    "5139": {
+      "path": "chunks/mesh_5139.bin",
+      "count": 186,
+      "first_mesh_code": "51390350",
+      "last_mesh_code": "51396242",
+      "bytes": 21604,
+      "sha256": "9ea8cb8c8260273ff6ad094360c4dd1735e3d1c437b9752372e678a14ee218dc"
+    },
+    "5229": {
+      "path": "chunks/mesh_5229.bin",
+      "count": 41,
+      "first_mesh_code": "52290302",
+      "last_mesh_code": "52290400",
+      "bytes": 4784,
+      "sha256": "923ce60935fdff773b4aa868edd326f16495b796fe0af31988eb0cf8aca24e7a"
+    },
+    "5231": {
+      "path": "chunks/mesh_5231.bin",
+      "count": 260,
+      "first_mesh_code": "52310407",
+      "last_mesh_code": "52312719",
+      "bytes": 30188,
+      "sha256": "55b94635e4959da9b98505d3e317fdf91e686ee6c5ae37726982a66f65d76a6c"
+    },
+    "5232": {
+      "path": "chunks/mesh_5232.bin",
+      "count": 4967,
+      "first_mesh_code": "52320000",
+      "last_mesh_code": "52327799",
+      "bytes": 576200,
+      "sha256": "92a4335a9118613e328b60a466e7be52f147237647344f443dcb163d6d0d3e1a"
+    },
+    "5233": {
+      "path": "chunks/mesh_5233.bin",
+      "count": 6400,
+      "first_mesh_code": "52330000",
+      "last_mesh_code": "52337799",
+      "bytes": 742428,
+      "sha256": "55884808be555a4cfb72c5ff98d62fa1f00cc6a107b0e59cf636b46ea416fc15"
+    },
+    "5234": {
+      "path": "chunks/mesh_5234.bin",
+      "count": 6021,
+      "first_mesh_code": "52340000",
+      "last_mesh_code": "52347799",
+      "bytes": 698464,
+      "sha256": "dfe33fb7293dc18e523a31559dbc75acb09c64fa66daa2c877b552bd7639c7d9"
+    },
+    "5235": {
+      "path": "chunks/mesh_5235.bin",
+      "count": 6371,
+      "first_mesh_code": "52350000",
+      "last_mesh_code": "52357799",
+      "bytes": 739064,
+      "sha256": "d9cced7fd29644f5e8ccdf9442fcb7c4f38ac8bfdca573c32dff17c16c029f50"
+    },
+    "5236": {
+      "path": "chunks/mesh_5236.bin",
+      "count": 5531,
+      "first_mesh_code": "52360000",
+      "last_mesh_code": "52367799",
+      "bytes": 641624,
+      "sha256": "cb826f9f359539b886fe73a7f577fc7deac46d172c378c0d2bbd623c37c7a233"
+    },
+    "5237": {
+      "path": "chunks/mesh_5237.bin",
+      "count": 6093,
+      "first_mesh_code": "52370000",
+      "last_mesh_code": "52377799",
+      "bytes": 706816,
+      "sha256": "726815e532f67c335c1d3f5ae5c504a82e4c02500eddbce8ca07ff42ae70e396"
+    },
+    "5238": {
+      "path": "chunks/mesh_5238.bin",
+      "count": 4753,
+      "first_mesh_code": "52380000",
+      "last_mesh_code": "52387799",
+      "bytes": 551376,
+      "sha256": "3a9e2330c72d73809cd82437b652eb573dea67751cec9f733ae64d9b8da8aab7"
+    },
+    "5239": {
+      "path": "chunks/mesh_5239.bin",
+      "count": 1912,
+      "first_mesh_code": "52390080",
+      "last_mesh_code": "52397799",
+      "bytes": 221820,
+      "sha256": "2b7594c6584dc86ac16f9c0b44a53d87b855e10aa58764d1a860125254e523e5"
+    },
+    "5240": {
+      "path": "chunks/mesh_5240.bin",
+      "count": 882,
+      "first_mesh_code": "52404030",
+      "last_mesh_code": "52407392",
+      "bytes": 102340,
+      "sha256": "71786846b2f29803ce24a8973a18c03972c89ef7819a23a8af86a6070fe45389"
+    },
+    "5332": {
+      "path": "chunks/mesh_5332.bin",
+      "count": 515,
+      "first_mesh_code": "53320503",
+      "last_mesh_code": "53322759",
+      "bytes": 59768,
+      "sha256": "897a35766f466b8e231a515fcc3673dc77c07ad78a5909403566d8d69688ccd5"
+    },
+    "5333": {
+      "path": "chunks/mesh_5333.bin",
+      "count": 1844,
+      "first_mesh_code": "53330000",
+      "last_mesh_code": "53337096",
+      "bytes": 213932,
+      "sha256": "186dfac1871951b2bc52c823a07547d8e3800da8052a156cf791f2d1168f866b"
+    },
+    "5334": {
+      "path": "chunks/mesh_5334.bin",
+      "count": 2795,
+      "first_mesh_code": "53340000",
+      "last_mesh_code": "53344739",
+      "bytes": 324248,
+      "sha256": "02c6d2dfa29f558b21d808e3aaa2bc780c55e97abd0eed13f73595e6c15e788f"
+    },
+    "5335": {
+      "path": "chunks/mesh_5335.bin",
+      "count": 2830,
+      "first_mesh_code": "53350000",
+      "last_mesh_code": "53357799",
+      "bytes": 328308,
+      "sha256": "9962840a002347d1444db5a90c37f64f872182063b768dee8317d28c376e04ec"
+    },
+    "5336": {
+      "path": "chunks/mesh_5336.bin",
+      "count": 6311,
+      "first_mesh_code": "53360000",
+      "last_mesh_code": "53367799",
+      "bytes": 732104,
+      "sha256": "12f3ca09a40dbe8ffe5cc6530d3d0e967cf2aa623243003892c6e1ebcb7601b5"
+    },
+    "5337": {
+      "path": "chunks/mesh_5337.bin",
+      "count": 6400,
+      "first_mesh_code": "53370000",
+      "last_mesh_code": "53377799",
+      "bytes": 742428,
+      "sha256": "ae5d20240be28cc571642d5dc7fe5bf11788a096430f3413f3f50ab618be0042"
+    },
+    "5338": {
+      "path": "chunks/mesh_5338.bin",
+      "count": 6400,
+      "first_mesh_code": "53380000",
+      "last_mesh_code": "53387799",
+      "bytes": 742428,
+      "sha256": "e1c784cd8ced9b939f56400987d43d43341f41a71aae93e5f02081c52182e6de"
+    },
+    "5339": {
+      "path": "chunks/mesh_5339.bin",
+      "count": 5840,
+      "first_mesh_code": "53390000",
+      "last_mesh_code": "53397799",
+      "bytes": 677468,
+      "sha256": "84bfb70f85be1639b178a32562dc8c8522eccc759c5c9d68f9f793fc96224e7f"
+    },
+    "5340": {
+      "path": "chunks/mesh_5340.bin",
+      "count": 3864,
+      "first_mesh_code": "53400000",
+      "last_mesh_code": "53407592",
+      "bytes": 448252,
+      "sha256": "7a7c31e875514fec8311c6793adc1755fcac13f8a3960bee6e369a3a6c72416a"
+    },
+    "5432": {
+      "path": "chunks/mesh_5432.bin",
+      "count": 37,
+      "first_mesh_code": "54320739",
+      "last_mesh_code": "54321749",
+      "bytes": 4320,
+      "sha256": "97c0b34064e68c0c546732d3dbc4345eb9016d8c941b72206e0e9a473603c06c"
+    },
+    "5433": {
+      "path": "chunks/mesh_5433.bin",
+      "count": 459,
+      "first_mesh_code": "54330000",
+      "last_mesh_code": "54334222",
+      "bytes": 53272,
+      "sha256": "46cc4f417be87b721711eca00321d8fe7c47662de08655b0e3dce9edcdbe3afc"
+    },
+    "5435": {
+      "path": "chunks/mesh_5435.bin",
+      "count": 6,
+      "first_mesh_code": "54350707",
+      "last_mesh_code": "54350729",
+      "bytes": 724,
+      "sha256": "54c8c26f4879700e37bf46c0ac312a12d7630a7d60cbb25833554bc12090dfc5"
+    },
+    "5436": {
+      "path": "chunks/mesh_5436.bin",
+      "count": 4572,
+      "first_mesh_code": "54360000",
+      "last_mesh_code": "54367799",
+      "bytes": 530380,
+      "sha256": "5c0b07a3e67ef23d59f10cd22fe8240edb105839ddfe20dadda01ef5053e875d"
+    },
+    "5437": {
+      "path": "chunks/mesh_5437.bin",
+      "count": 6400,
+      "first_mesh_code": "54370000",
+      "last_mesh_code": "54377799",
+      "bytes": 742428,
+      "sha256": "f340939c1c98d5c4b0245a2283dfe04ef39e7b7505c85787663ec241c5a55343"
+    },
+    "5438": {
+      "path": "chunks/mesh_5438.bin",
+      "count": 6400,
+      "first_mesh_code": "54380000",
+      "last_mesh_code": "54387799",
+      "bytes": 742428,
+      "sha256": "f8397b878751d4a1397cefe2e2c2b8f7bce7124bdc1e6c290e4bcc809ef2f3e6"
+    },
+    "5439": {
+      "path": "chunks/mesh_5439.bin",
+      "count": 6400,
+      "first_mesh_code": "54390000",
+      "last_mesh_code": "54397799",
+      "bytes": 742428,
+      "sha256": "9a44aa470f595f70f47456279fde65c7b6ff9bcbdceadbad8cd42e97fe7704a4"
+    },
+    "5440": {
+      "path": "chunks/mesh_5440.bin",
+      "count": 4001,
+      "first_mesh_code": "54400000",
+      "last_mesh_code": "54407597",
+      "bytes": 464144,
+      "sha256": "5d12b31983c23e715ffa5441009bdd1d4c7872081a660dfc49fe572220087f81"
+    },
+    "5531": {
+      "path": "chunks/mesh_5531.bin",
+      "count": 4,
+      "first_mesh_code": "55316688",
+      "last_mesh_code": "55316699",
+      "bytes": 492,
+      "sha256": "1adca4cfa42d9f293ae09d2e6d09c14e6110b55fbd4d01339d8720c1e51ff847"
+    },
+    "5536": {
+      "path": "chunks/mesh_5536.bin",
+      "count": 1775,
+      "first_mesh_code": "55360501",
+      "last_mesh_code": "55367799",
+      "bytes": 205928,
+      "sha256": "2df09fc035a5b887a3d2a082d7da925dae654fe34e8a582bc139ee1a56bc4a33"
+    },
+    "5537": {
+      "path": "chunks/mesh_5537.bin",
+      "count": 2766,
+      "first_mesh_code": "55370000",
+      "last_mesh_code": "55377291",
+      "bytes": 320884,
+      "sha256": "c03b0b7c88ea3b3fb0940e6eba4d98226abfc7084de713aae4cbfb0e62bd7a2d"
+    },
+    "5538": {
+      "path": "chunks/mesh_5538.bin",
+      "count": 5862,
+      "first_mesh_code": "55380000",
+      "last_mesh_code": "55387799",
+      "bytes": 680020,
+      "sha256": "479c6b74e54fc01a921176d15bf6cf273b10b0cf9ccb75b639bec14f6ab5927d"
+    },
+    "5539": {
+      "path": "chunks/mesh_5539.bin",
+      "count": 6400,
+      "first_mesh_code": "55390000",
+      "last_mesh_code": "55397799",
+      "bytes": 742428,
+      "sha256": "8c08670f27c8df1d931bb5df47e2cef1f693058330f907a21c27ee3f281bd19b"
+    },
+    "5540": {
+      "path": "chunks/mesh_5540.bin",
+      "count": 5801,
+      "first_mesh_code": "55400000",
+      "last_mesh_code": "55407799",
+      "bytes": 672944,
+      "sha256": "18dc9f25547cfb163dee58526ec4ea10adf7f142f5a4a1c0f11d53809ccaa256"
+    },
+    "5541": {
+      "path": "chunks/mesh_5541.bin",
+      "count": 48,
+      "first_mesh_code": "55415020",
+      "last_mesh_code": "55417092",
+      "bytes": 5596,
+      "sha256": "0731d80e557f817ebfde3ccbe679ed88facf86401e6e586cc437f20cee2340f6"
+    },
+    "5636": {
+      "path": "chunks/mesh_5636.bin",
+      "count": 185,
+      "first_mesh_code": "56360508",
+      "last_mesh_code": "56366724",
+      "bytes": 21488,
+      "sha256": "53c0051e4fc47ed154f510f2472363caea3691043912f66f2965a2daa0848823"
+    },
+    "5637": {
+      "path": "chunks/mesh_5637.bin",
+      "count": 491,
+      "first_mesh_code": "56370000",
+      "last_mesh_code": "56372243",
+      "bytes": 56984,
+      "sha256": "5ffbc0b20b2d6b3064367a75781e98a714fcc59a544df0b0316c2ae8865d1e5b"
+    },
+    "5638": {
+      "path": "chunks/mesh_5638.bin",
+      "count": 1924,
+      "first_mesh_code": "56380306",
+      "last_mesh_code": "56387493",
+      "bytes": 223212,
+      "sha256": "ba30bba56eef938907e68296ebd6363cfb5d05f0e2d80d7c57f4c1e6ef9512ad"
+    },
+    "5639": {
+      "path": "chunks/mesh_5639.bin",
+      "count": 6320,
+      "first_mesh_code": "56390000",
+      "last_mesh_code": "56397799",
+      "bytes": 733148,
+      "sha256": "d756314be15466c9adc74b5692911802171c75ae5a79ca9eaec57c180f10e0e1"
+    },
+    "5640": {
+      "path": "chunks/mesh_5640.bin",
+      "count": 6293,
+      "first_mesh_code": "56400000",
+      "last_mesh_code": "56407793",
+      "bytes": 730016,
+      "sha256": "0ccf059511c4796b2951c99320d96c0548f79a8686b8fdf77473b0541633c3e2"
+    },
+    "5641": {
+      "path": "chunks/mesh_5641.bin",
+      "count": 145,
+      "first_mesh_code": "56410000",
+      "last_mesh_code": "56415010",
+      "bytes": 16848,
+      "sha256": "91343d814534b9824f3ff9c94f00f037dd88fc5a31f6bef3e21d548bbbab1c2a"
+    },
+    "5738": {
+      "path": "chunks/mesh_5738.bin",
+      "count": 624,
+      "first_mesh_code": "57380107",
+      "last_mesh_code": "57384401",
+      "bytes": 72412,
+      "sha256": "728ca24fdfb34b8047889e7ce9dbaa3e44767d0ad76c96d47ecf4192c1c616a9"
+    },
+    "5739": {
+      "path": "chunks/mesh_5739.bin",
+      "count": 3569,
+      "first_mesh_code": "57390107",
+      "last_mesh_code": "57397799",
+      "bytes": 414032,
+      "sha256": "f5d368245abe62d2915bf99ba4e8e45ec42d140cf62b29462862d33bfe20a0c3"
+    },
+    "5740": {
+      "path": "chunks/mesh_5740.bin",
+      "count": 6291,
+      "first_mesh_code": "57400000",
+      "last_mesh_code": "57407799",
+      "bytes": 729784,
+      "sha256": "f4ec40a095f36238ab2acb12d32e6b182fe491c7ba15e94b83fe95381e08c66c"
+    },
+    "5741": {
+      "path": "chunks/mesh_5741.bin",
+      "count": 1740,
+      "first_mesh_code": "57412080",
+      "last_mesh_code": "57417491",
+      "bytes": 201868,
+      "sha256": "fe7a8fc077d9157c689763c7443b717a97957fbb43aa862559cd2500b434fc3e"
+    },
+    "5839": {
+      "path": "chunks/mesh_5839.bin",
+      "count": 1181,
+      "first_mesh_code": "58390408",
+      "last_mesh_code": "58397799",
+      "bytes": 137024,
+      "sha256": "f04935f6099bb2890ec17ac8e330757705d95bb84721a739d92696535b7acb25"
+    },
+    "5840": {
+      "path": "chunks/mesh_5840.bin",
+      "count": 6400,
+      "first_mesh_code": "58400000",
+      "last_mesh_code": "58407799",
+      "bytes": 742428,
+      "sha256": "b20ac405c0903924ff34eb493beacd5b38c475651affe84a710b738c7d4f0f4e"
+    },
+    "5841": {
+      "path": "chunks/mesh_5841.bin",
+      "count": 4899,
+      "first_mesh_code": "58410000",
+      "last_mesh_code": "58417798",
+      "bytes": 568312,
+      "sha256": "68de4ff657e166d2d44ef684030719d131d118914709e24eca0fc27514534dfe"
+    },
+    "5939": {
+      "path": "chunks/mesh_5939.bin",
+      "count": 348,
+      "first_mesh_code": "59390709",
+      "last_mesh_code": "59397799",
+      "bytes": 40396,
+      "sha256": "ea832eb772845fd36bc9fbdfb56dad8292f4cae34c94f40c332802dfeee20c35"
+    },
+    "5940": {
+      "path": "chunks/mesh_5940.bin",
+      "count": 6247,
+      "first_mesh_code": "59400000",
+      "last_mesh_code": "59407799",
+      "bytes": 724680,
+      "sha256": "547c5a9fb7fbfa672037d056cb626b47ac97485d3e36455fa86dfb1839471ded"
+    },
+    "5941": {
+      "path": "chunks/mesh_5941.bin",
+      "count": 6319,
+      "first_mesh_code": "59410000",
+      "last_mesh_code": "59417795",
+      "bytes": 733032,
+      "sha256": "cecf5f69356f0793f7609d0929a69271b8483dcddddfe123117583057bc7847a"
+    },
+    "5942": {
+      "path": "chunks/mesh_5942.bin",
+      "count": 129,
+      "first_mesh_code": "59420080",
+      "last_mesh_code": "59425030",
+      "bytes": 14992,
+      "sha256": "5f762ef4c221817b99bb74ac3ea2b405fcb309e013e5d6fe3c9aff5074494483"
+    },
+    "6039": {
+      "path": "chunks/mesh_6039.bin",
+      "count": 349,
+      "first_mesh_code": "60390505",
+      "last_mesh_code": "60397799",
+      "bytes": 40512,
+      "sha256": "c8a61ecfe50f18b1ea74007e33f30b3acfc275d31a77a8d1fc6481fa28858976"
+    },
+    "6040": {
+      "path": "chunks/mesh_6040.bin",
+      "count": 6386,
+      "first_mesh_code": "60400000",
+      "last_mesh_code": "60407799",
+      "bytes": 740804,
+      "sha256": "5d24e9f9d1628f64d77bb88d205b89bcda39775a127e4c72def4d67442e448fe"
+    },
+    "6041": {
+      "path": "chunks/mesh_6041.bin",
+      "count": 4682,
+      "first_mesh_code": "60410000",
+      "last_mesh_code": "60417395",
+      "bytes": 543140,
+      "sha256": "0b37972013eb9d511e8e69b3802b0dd42a1372bd9d7e6208c5ae9fd3cd8fbecc"
+    },
+    "6139": {
+      "path": "chunks/mesh_6139.bin",
+      "count": 27,
+      "first_mesh_code": "61390704",
+      "last_mesh_code": "61390799",
+      "bytes": 3160,
+      "sha256": "308f56c29c9a315063b01a2da20f54751c9b2a07e2d87878f96c532cffab6b86"
+    },
+    "6140": {
+      "path": "chunks/mesh_6140.bin",
+      "count": 3437,
+      "first_mesh_code": "61400000",
+      "last_mesh_code": "61407799",
+      "bytes": 398720,
+      "sha256": "279477dc1423ba195297f0f1857ffb45cdf1be648ba98cb1783b874abab1b5f7"
+    },
+    "6141": {
+      "path": "chunks/mesh_6141.bin",
+      "count": 1889,
+      "first_mesh_code": "61410000",
+      "last_mesh_code": "61417394",
+      "bytes": 219152,
+      "sha256": "1c34c1c4018dd2fde6c7a0b60c6cdf9f338725520599f1105e73e3257ad501be"
+    },
+    "6239": {
+      "path": "chunks/mesh_6239.bin",
+      "count": 53,
+      "first_mesh_code": "62390623",
+      "last_mesh_code": "62393799",
+      "bytes": 6176,
+      "sha256": "dc6fe18f240d5218cf1b62116052cf40248ab8a7c032601e380af5e1128a063b"
+    },
+    "6240": {
+      "path": "chunks/mesh_6240.bin",
+      "count": 3656,
+      "first_mesh_code": "62400096",
+      "last_mesh_code": "62407791",
+      "bytes": 424124,
+      "sha256": "633d0c274805fd90af2b9db94179ca1d3e159acb5430ef1168b4af0fe69c9aa1"
+    },
+    "6241": {
+      "path": "chunks/mesh_6241.bin",
+      "count": 586,
+      "first_mesh_code": "62410000",
+      "last_mesh_code": "62416130",
+      "bytes": 68004,
+      "sha256": "7f0576a6313742f1f26531e72e95ef9e67d1d7024696a9312a5bbe341e156eaa"
+    },
+    "6243": {
+      "path": "chunks/mesh_6243.bin",
+      "count": 55,
+      "first_mesh_code": "62436290",
+      "last_mesh_code": "62437290",
+      "bytes": 6408,
+      "sha256": "196323ac0e3227001abb97eed1494b6d7e6094778d3e2cccba39c19766b8f69e"
+    },
+    "6339": {
+      "path": "chunks/mesh_6339.bin",
+      "count": 1113,
+      "first_mesh_code": "63390315",
+      "last_mesh_code": "63397799",
+      "bytes": 129136,
+      "sha256": "2656d4f5035c86aa382a4fa3355a7f566c104914dd85d3cad9cb32327fa6d969"
+    },
+    "6340": {
+      "path": "chunks/mesh_6340.bin",
+      "count": 3771,
+      "first_mesh_code": "63400008",
+      "last_mesh_code": "63407799",
+      "bytes": 437464,
+      "sha256": "7cdad4600e2ee95744438a9c97410a705bdc70d7f0b526207b4d10f840a13458"
+    },
+    "6341": {
+      "path": "chunks/mesh_6341.bin",
+      "count": 1298,
+      "first_mesh_code": "63413050",
+      "last_mesh_code": "63417799",
+      "bytes": 150596,
+      "sha256": "621ec73f9786d4efc2fe3906ae00614d706616a720faff3352a3978c94e16d3b"
+    },
+    "6342": {
+      "path": "chunks/mesh_6342.bin",
+      "count": 3715,
+      "first_mesh_code": "63421659",
+      "last_mesh_code": "63427799",
+      "bytes": 430968,
+      "sha256": "71cac0036137cd458ce2a030a299bbe7b0f1befd8a4c2f0e4283bb3e5b38b163"
+    },
+    "6343": {
+      "path": "chunks/mesh_6343.bin",
+      "count": 2484,
+      "first_mesh_code": "63430039",
+      "last_mesh_code": "63437590",
+      "bytes": 288172,
+      "sha256": "9fcd5220b2ddfcf973c6acd1f7a924e820d1bfb8b2de55767991033732f658ea"
+    },
+    "6439": {
+      "path": "chunks/mesh_6439.bin",
+      "count": 28,
+      "first_mesh_code": "64390609",
+      "last_mesh_code": "64390739",
+      "bytes": 3276,
+      "sha256": "cc15343629d7dae0d1f46d065cd4a6a8e2bf0640daf5ba13e9a3a6cd8594506b"
+    },
+    "6440": {
+      "path": "chunks/mesh_6440.bin",
+      "count": 3949,
+      "first_mesh_code": "64400000",
+      "last_mesh_code": "64407560",
+      "bytes": 458112,
+      "sha256": "cf39a62924d02854f8541fe1732b16668a1516967effdaba66d03e62f6637e41"
+    },
+    "6441": {
+      "path": "chunks/mesh_6441.bin",
+      "count": 5902,
+      "first_mesh_code": "64410000",
+      "last_mesh_code": "64417799",
+      "bytes": 684660,
+      "sha256": "b7d65227c2fad828e20767c5fe5dd0ea4edf47678772db5f11bdd378bd9b7cff"
+    },
+    "6442": {
+      "path": "chunks/mesh_6442.bin",
+      "count": 6400,
+      "first_mesh_code": "64420000",
+      "last_mesh_code": "64427799",
+      "bytes": 742428,
+      "sha256": "255f8bad2cdef7e7872b36fdf24b4a6f2a7d840eb23b49a54b2d04f26c8f58c7"
+    },
+    "6443": {
+      "path": "chunks/mesh_6443.bin",
+      "count": 5956,
+      "first_mesh_code": "64430000",
+      "last_mesh_code": "64437799",
+      "bytes": 690924,
+      "sha256": "a8e8849ea65de32259ab775d3119180f664605fbb66deaea35c0c3bd93db8bda"
+    },
+    "6444": {
+      "path": "chunks/mesh_6444.bin",
+      "count": 3499,
+      "first_mesh_code": "64443000",
+      "last_mesh_code": "64447799",
+      "bytes": 405912,
+      "sha256": "a8c7a6899b4c9a47cc4701f1b81abd1a7e54ced92860f0ede07554e22ec8ff3f"
+    },
+    "6445": {
+      "path": "chunks/mesh_6445.bin",
+      "count": 1086,
+      "first_mesh_code": "64453080",
+      "last_mesh_code": "64457691",
+      "bytes": 126004,
+      "sha256": "bbaa1677fe568676ed0b925266e4fc766e182986dfb8cc07d921ef5fb05e0cb2"
+    },
+    "6540": {
+      "path": "chunks/mesh_6540.bin",
+      "count": 44,
+      "first_mesh_code": "65400207",
+      "last_mesh_code": "65400440",
+      "bytes": 5132,
+      "sha256": "247873ca664def4460c9c5d7accdc7cb632bd86ee7953faee62de21fd9b0387f"
+    },
+    "6541": {
+      "path": "chunks/mesh_6541.bin",
+      "count": 3675,
+      "first_mesh_code": "65410303",
+      "last_mesh_code": "65417799",
+      "bytes": 426328,
+      "sha256": "4cfb70cb686fdb6d12ea9e5b93b5d80f7dc2e9c2c3e129bfdc8b19f8ffd65f6d"
+    },
+    "6542": {
+      "path": "chunks/mesh_6542.bin",
+      "count": 6400,
+      "first_mesh_code": "65420000",
+      "last_mesh_code": "65427799",
+      "bytes": 742428,
+      "sha256": "9f6303b5ce369ab5b2a48ffe05c604e9214c3836fecfdcfa241c0fc3193547a8"
+    },
+    "6543": {
+      "path": "chunks/mesh_6543.bin",
+      "count": 6400,
+      "first_mesh_code": "65430000",
+      "last_mesh_code": "65437799",
+      "bytes": 742428,
+      "sha256": "8a8a301bf83d4a0841bb56b1c628931b8457acffd522fa70ec768680530bb88b"
+    },
+    "6544": {
+      "path": "chunks/mesh_6544.bin",
+      "count": 6068,
+      "first_mesh_code": "65440000",
+      "last_mesh_code": "65447799",
+      "bytes": 703916,
+      "sha256": "839481ff398ff1c88485a0d02cc8dbc4dd93c5905db30e0170217b9d192114bf"
+    },
+    "6545": {
+      "path": "chunks/mesh_6545.bin",
+      "count": 1896,
+      "first_mesh_code": "65450000",
+      "last_mesh_code": "65457694",
+      "bytes": 219964,
+      "sha256": "afe94f36fa6461fc492de23348c2180abeb3ebf9e93df14109e0a62503990a0d"
+    },
+    "6546": {
+      "path": "chunks/mesh_6546.bin",
+      "count": 521,
+      "first_mesh_code": "65460030",
+      "last_mesh_code": "65466740",
+      "bytes": 60464,
+      "sha256": "4663d77eb5305b42aa4e5e4d37d9eb275631ca8972cd30c7322875322f9f85b6"
+    },
+    "6641": {
+      "path": "chunks/mesh_6641.bin",
+      "count": 1959,
+      "first_mesh_code": "66410502",
+      "last_mesh_code": "66417799",
+      "bytes": 227272,
+      "sha256": "654ba92bbcddd4803e3d192641c493a00ac14adf3fd5fd599ebd9244bd1a9e57"
+    },
+    "6642": {
+      "path": "chunks/mesh_6642.bin",
+      "count": 6345,
+      "first_mesh_code": "66420000",
+      "last_mesh_code": "66427790",
+      "bytes": 736048,
+      "sha256": "8f0a0a0cc0e3e1ff8e69fef0376e3d4880cf85334441c1e74c41c18c95d7a1d9"
+    },
+    "6643": {
+      "path": "chunks/mesh_6643.bin",
+      "count": 2868,
+      "first_mesh_code": "66430000",
+      "last_mesh_code": "66436060",
+      "bytes": 332716,
+      "sha256": "2349f345b9983594596eff6115746823e568fd2c682cc9dad6ed938a195ebcf6"
+    },
+    "6644": {
+      "path": "chunks/mesh_6644.bin",
+      "count": 323,
+      "first_mesh_code": "66440000",
+      "last_mesh_code": "66441230",
+      "bytes": 37496,
+      "sha256": "916c9954de3b0e37bbc23d345460c2f54020c59e22f7c4663980471c4afe919a"
+    },
+    "6645": {
+      "path": "chunks/mesh_6645.bin",
+      "count": 1011,
+      "first_mesh_code": "66450000",
+      "last_mesh_code": "66454709",
+      "bytes": 117304,
+      "sha256": "0d0410a9631f36df83f65af2e18b9dc453dfe0db30805ad6c0c007b1f98c4c9e"
+    },
+    "6646": {
+      "path": "chunks/mesh_6646.bin",
+      "count": 1068,
+      "first_mesh_code": "66462000",
+      "last_mesh_code": "66467789",
+      "bytes": 123916,
+      "sha256": "987ff7f2ef2159f46a0980291b2c86d8b98666d1a20ccd67e32aa07f2a609e0e"
+    },
+    "6647": {
+      "path": "chunks/mesh_6647.bin",
+      "count": 283,
+      "first_mesh_code": "66475070",
+      "last_mesh_code": "66477294",
+      "bytes": 32856,
+      "sha256": "aca4c3d6f249694183e6738dd781365135210c8c278d0d494b40063659d6f883"
+    },
+    "6740": {
+      "path": "chunks/mesh_6740.bin",
+      "count": 1,
+      "first_mesh_code": "67407799",
+      "last_mesh_code": "67407799",
+      "bytes": 144,
+      "sha256": "3f536df3cca2f1a0e758a8b08ef336330c44e3b1999cd19e7106e07b215a2dcb"
+    },
+    "6741": {
+      "path": "chunks/mesh_6741.bin",
+      "count": 2368,
+      "first_mesh_code": "67410603",
+      "last_mesh_code": "67417799",
+      "bytes": 274716,
+      "sha256": "1b3ba70e48782a15b7483eadd2347f95736fac08cab21e9377b3952369a271a1"
+    },
+    "6742": {
+      "path": "chunks/mesh_6742.bin",
+      "count": 3400,
+      "first_mesh_code": "67420000",
+      "last_mesh_code": "67427210",
+      "bytes": 394428,
+      "sha256": "4ed4d5cd23bd490f9fd1e50ea0193484af5b31ffc0ba67629dcd2fe7391d64de"
+    },
+    "6747": {
+      "path": "chunks/mesh_6747.bin",
+      "count": 1921,
+      "first_mesh_code": "67470101",
+      "last_mesh_code": "67477799",
+      "bytes": 222864,
+      "sha256": "050a49ade6dcbbafb11c0eb7e18fccbefb40adb4b7f342072eb119b78545bd82"
+    },
+    "6748": {
+      "path": "chunks/mesh_6748.bin",
+      "count": 666,
+      "first_mesh_code": "67484020",
+      "last_mesh_code": "67487694",
+      "bytes": 77284,
+      "sha256": "cc98e52af60eb3c80c62ebdfa2da7d1a4ef5d4fedfa4bf85ed3554d5d2d9d3a8"
+    },
+    "6840": {
+      "path": "chunks/mesh_6840.bin",
+      "count": 33,
+      "first_mesh_code": "68400719",
+      "last_mesh_code": "68402706",
+      "bytes": 3856,
+      "sha256": "6f79f39ff58f1b09ed666cf949fc7606cb55060bdce58a6f771fab6a9bc71028"
+    },
+    "6841": {
+      "path": "chunks/mesh_6841.bin",
+      "count": 498,
+      "first_mesh_code": "68410000",
+      "last_mesh_code": "68412733",
+      "bytes": 57796,
+      "sha256": "73a703bed2164cd6950105918c28498cf168e29f0825c7d597656014801ed5b0"
+    },
+    "6842": {
+      "path": "chunks/mesh_6842.bin",
+      "count": 109,
+      "first_mesh_code": "68420000",
+      "last_mesh_code": "68421050",
+      "bytes": 12672,
+      "sha256": "b8baa6906a21ca2aa20a170ad6f223725432853183fa70d3978fb34dd46798ae"
+    },
+    "6847": {
+      "path": "chunks/mesh_6847.bin",
+      "count": 115,
+      "first_mesh_code": "68470608",
+      "last_mesh_code": "68471724",
+      "bytes": 13368,
+      "sha256": "1c8cd7502a6ec08b5b29bb9599825074fa2854021c8e4d3d6a43347b5a0f97a6"
+    },
+    "6848": {
+      "path": "chunks/mesh_6848.bin",
+      "count": 723,
+      "first_mesh_code": "68480000",
+      "last_mesh_code": "68482720",
+      "bytes": 83896,
+      "sha256": "517170e6a09cfeb1743ebf1e2846b3a62e70b4d8bcc9f5f8a87126ccc5cfb969"
+    }
+  },
+  "rasters": {
+    "render": {
+      "projection": "EPSG:3857",
+      "native_zoom": 7,
+      "width": 2834,
+      "height": 2776,
+      "bounds": {
+        "north": 45.583289756006316,
+        "south": 20.385825381874266,
+        "west": 122.89306640625,
+        "east": 154.0283203125
+      },
+      "source_mesh_count": 387717,
+      "unique_render_pixels": 369168,
+      "note": "全国表示用の描画縮約。地点値は全1kmメッシュを保持するchunkから取得。"
+    },
+    "legends": {
+      "monthly": {
+        "absolute": {
+          "title": "月降水量",
+          "breaks": [
+            0.01,
+            25,
+            50,
+            75,
+            100,
+            150,
+            200,
+            250,
+            300,
+            400,
+            500,
+            700
+          ],
+          "colors": [
+            "#ffffe5",
+            "#f7fcb9",
+            "#d9f0a3",
+            "#addd8e",
+            "#78c679",
+            "#41ab5d",
+            "#238443",
+            "#41b6c4",
+            "#2c7fb8",
+            "#253494",
+            "#225ea8",
+            "#0c2c84",
+            "#081d58"
+          ],
+          "labels": {
+            "low": "0mm",
+            "middle": "200mm",
+            "high": "700mm超"
+          }
+        },
+        "difference": {
+          "title": "30年平均値の更新差",
+          "breaks": [
+            -400,
+            -300,
+            -200,
+            -100,
+            -50,
+            -20,
+            20,
+            50,
+            100,
+            200,
+            300,
+            400
+          ],
+          "colors": [
+            "#2d2a78",
+            "#4149a8",
+            "#5978c7",
+            "#79a4dc",
+            "#a8c9e8",
+            "#d9e8f2",
+            "#f2f2ee",
+            "#f7ddd0",
+            "#efb8a1",
+            "#e98b70",
+            "#d95f4f",
+            "#b9363e",
+            "#7f1d35"
+          ],
+          "labels": {
+            "low": "−400mm以下",
+            "middle": "0mm",
+            "high": "+400mm超"
+          }
+        }
+      },
+      "annual": {
+        "absolute": {
+          "title": "年降水量",
+          "breaks": [
+            250,
+            500,
+            750,
+            1000,
+            1250,
+            1500,
+            1750,
+            2000,
+            2500,
+            3000,
+            3500,
+            4000
+          ],
+          "colors": [
+            "#ffffe5",
+            "#f7fcb9",
+            "#d9f0a3",
+            "#addd8e",
+            "#78c679",
+            "#41ab5d",
+            "#238443",
+            "#41b6c4",
+            "#2c7fb8",
+            "#253494",
+            "#225ea8",
+            "#0c2c84",
+            "#081d58"
+          ],
+          "labels": {
+            "low": "250mm以下",
+            "middle": "1,750mm",
+            "high": "4,000mm超"
+          }
+        },
+        "difference": {
+          "title": "30年平均値の更新差",
+          "breaks": [
+            -400,
+            -300,
+            -200,
+            -100,
+            -50,
+            -20,
+            20,
+            50,
+            100,
+            200,
+            300,
+            400
+          ],
+          "colors": [
+            "#2d2a78",
+            "#4149a8",
+            "#5978c7",
+            "#79a4dc",
+            "#a8c9e8",
+            "#d9e8f2",
+            "#f2f2ee",
+            "#f7ddd0",
+            "#efb8a1",
+            "#e98b70",
+            "#d95f4f",
+            "#b9363e",
+            "#7f1d35"
+          ],
+          "labels": {
+            "low": "−400mm以下",
+            "middle": "0mm",
+            "high": "+400mm超"
+          }
+        }
+      }
+    },
+    "files": {
+      "1991_2020": {
+        "1": {
+          "path": "rasters/precip_1991_2020_m01.webp",
+          "bytes": 29416,
+          "sha256": "9bbb4348754706fedcf42f7624271e8ebe971874c1eceb64caa647dad4c33acf"
+        },
+        "2": {
+          "path": "rasters/precip_1991_2020_m02.webp",
+          "bytes": 27060,
+          "sha256": "da1b8d81abd06a50514b2d2787de45c2b2fdbd0492335096345880a620fcb932"
+        },
+        "3": {
+          "path": "rasters/precip_1991_2020_m03.webp",
+          "bytes": 25702,
+          "sha256": "9fd902d4e389280ff0957581a70394d6895036c7f2746eca432ceec9c6d2510d"
+        },
+        "4": {
+          "path": "rasters/precip_1991_2020_m04.webp",
+          "bytes": 26290,
+          "sha256": "ce8db633859bd59bde1c6e4ae369acedb61869b34296a0ba65211c0dcc6bdfc6"
+        },
+        "5": {
+          "path": "rasters/precip_1991_2020_m05.webp",
+          "bytes": 25766,
+          "sha256": "ea2b253885868bf84bf9d84f4d686f9eacb02ec447c5883188e9a28f8072bc1d"
+        },
+        "6": {
+          "path": "rasters/precip_1991_2020_m06.webp",
+          "bytes": 25444,
+          "sha256": "17d935995420750dde1b6674b38358aaa0aa191fb54b0079a5ad8b3d88939eb3"
+        },
+        "7": {
+          "path": "rasters/precip_1991_2020_m07.webp",
+          "bytes": 26428,
+          "sha256": "c2d04a7df235b6919b363e769bb5709865c4dbaa8fc06c20166c0e761edc1a60"
+        },
+        "8": {
+          "path": "rasters/precip_1991_2020_m08.webp",
+          "bytes": 28046,
+          "sha256": "6939a5d658c98b6f78a3e4c69c78a1aa3fc3c5eb37153e173ead75bdbcea5e2c"
+        },
+        "9": {
+          "path": "rasters/precip_1991_2020_m09.webp",
+          "bytes": 27756,
+          "sha256": "2569940aa8c0e10d3f155a1616d5856e3b3a351e1bff71ba3190bd2e3f320fae"
+        },
+        "10": {
+          "path": "rasters/precip_1991_2020_m10.webp",
+          "bytes": 25116,
+          "sha256": "0347575eb1f8b27428c65af4ae4c24cdfdeee7a5c4680153b001c98744e812f5"
+        },
+        "11": {
+          "path": "rasters/precip_1991_2020_m11.webp",
+          "bytes": 27560,
+          "sha256": "1fe0b9fe4d79f4b0cf687fa1e20267be6c2d4341168c04f7c64223a379a5e543"
+        },
+        "12": {
+          "path": "rasters/precip_1991_2020_m12.webp",
+          "bytes": 29506,
+          "sha256": "ada4d9b79552f887b9cb38ea3d7d87db288c82b6107997b7092f14f50ddfbdd2"
+        },
+        "13": {
+          "path": "rasters/precip_1991_2020_m13.webp",
+          "bytes": 32184,
+          "sha256": "c92043159f1450a4c9437a5c4ca905fe76ce0457f29a3a57f1a7ddd96c798d5e"
+        }
+      },
+      "1996_2025": {
+        "1": {
+          "path": "rasters/precip_1996_2025_m01.webp",
+          "bytes": 29456,
+          "sha256": "873e02766a08dfa2183360eeb36060d40940541ce7c76f8fab01cb5b38fcab95"
+        },
+        "2": {
+          "path": "rasters/precip_1996_2025_m02.webp",
+          "bytes": 27248,
+          "sha256": "318f6406ff7ad1c840a895b92844df457d74357b30c2ef319465ad74d77c7e54"
+        },
+        "3": {
+          "path": "rasters/precip_1996_2025_m03.webp",
+          "bytes": 26204,
+          "sha256": "e366be89cbedfd222336a7ed18c6aeeb3ef3e33e49494415651d213b6a30a51e"
+        },
+        "4": {
+          "path": "rasters/precip_1996_2025_m04.webp",
+          "bytes": 26300,
+          "sha256": "da2217cbf519f93d61e821f70ad0af19768b438ea8cc613f8204e444bfe28d8f"
+        },
+        "5": {
+          "path": "rasters/precip_1996_2025_m05.webp",
+          "bytes": 26392,
+          "sha256": "3af8ba56b3844080cb2b104bf13a3129e6f45ec7253f3119de788609479e4f13"
+        },
+        "6": {
+          "path": "rasters/precip_1996_2025_m06.webp",
+          "bytes": 25918,
+          "sha256": "5ee0d3389d52c443f3544b53d86e44c7762202a8d5068fc780e60e7d6c8eba42"
+        },
+        "7": {
+          "path": "rasters/precip_1996_2025_m07.webp",
+          "bytes": 27046,
+          "sha256": "d11134704943ae8a88255ce01265b94519a7c5025e166be0a68092b2ee03b159"
+        },
+        "8": {
+          "path": "rasters/precip_1996_2025_m08.webp",
+          "bytes": 28096,
+          "sha256": "dbc88e6d4cf29639e7add0030df01af0f64ffb89b829f9a2cb3155e9fc6fb795"
+        },
+        "9": {
+          "path": "rasters/precip_1996_2025_m09.webp",
+          "bytes": 27532,
+          "sha256": "4bc67e5d3bcaa1d93c0abd5c4a307eda7a7fdd466d9562d4ee9ef7cffeb5e3f4"
+        },
+        "10": {
+          "path": "rasters/precip_1996_2025_m10.webp",
+          "bytes": 24338,
+          "sha256": "752ec93bf07b9c7e9ac5e4f258eb323c5158205d9a0017f757a11af2406962fa"
+        },
+        "11": {
+          "path": "rasters/precip_1996_2025_m11.webp",
+          "bytes": 27340,
+          "sha256": "8a5db0f3922ec1e64e93061d00b007ebf261b83ea6816f917e3290ed073b344c"
+        },
+        "12": {
+          "path": "rasters/precip_1996_2025_m12.webp",
+          "bytes": 29424,
+          "sha256": "58121ae7bb4241f4b07ba65514c3c658148958c52d9ef45681e53189f2eac40f"
+        },
+        "13": {
+          "path": "rasters/precip_1996_2025_m13.webp",
+          "bytes": 32234,
+          "sha256": "dd86eb38e7c8092d17c20f28089957ebf75baeebcbe4293501c599bcebd03b53"
+        }
+      },
+      "difference": {
+        "1": {
+          "path": "rasters/precip_difference_m01.webp",
+          "bytes": 14246,
+          "sha256": "63cd313c597b3a9a48c0d0c7d860eb62bddce2359dd4366d4a1c6e22817bdb0d"
+        },
+        "2": {
+          "path": "rasters/precip_difference_m02.webp",
+          "bytes": 14004,
+          "sha256": "a53068cea897aec114b4bbb9750fa1f70dedf88eb785b7a7e60fee93b2a0f2f1"
+        },
+        "3": {
+          "path": "rasters/precip_difference_m03.webp",
+          "bytes": 14526,
+          "sha256": "257796a10b2fd8b451ceeed4f1eef8bad4752d1777363af95098b97f5076638a"
+        },
+        "4": {
+          "path": "rasters/precip_difference_m04.webp",
+          "bytes": 14602,
+          "sha256": "a00dea768ac7af29220ce473fb9862e6a1055e8999b1f43e3c05a30ac485d6f0"
+        },
+        "5": {
+          "path": "rasters/precip_difference_m05.webp",
+          "bytes": 16346,
+          "sha256": "d6b5656a42754eb243ef94511b802a0ca31c31e5e0a38619c19ed888f44d2b21"
+        },
+        "6": {
+          "path": "rasters/precip_difference_m06.webp",
+          "bytes": 16240,
+          "sha256": "0b23b399314bc0eace674612a9d4dacedfeb3f2614920da1a55a2db162390780"
+        },
+        "7": {
+          "path": "rasters/precip_difference_m07.webp",
+          "bytes": 16980,
+          "sha256": "437442e997f0e1b2d42acdd0755155d030d8738138a66b5fe279878b9a5754ff"
+        },
+        "8": {
+          "path": "rasters/precip_difference_m08.webp",
+          "bytes": 18304,
+          "sha256": "9b1a45c17bdc0062fa9a29a0a02bea68b99462959e8c82ed53556877829420a5"
+        },
+        "9": {
+          "path": "rasters/precip_difference_m09.webp",
+          "bytes": 16332,
+          "sha256": "a6b9427602002fe82e9c23b5a1a321950ff647952e5f964648a85525c56d00f8"
+        },
+        "10": {
+          "path": "rasters/precip_difference_m10.webp",
+          "bytes": 14960,
+          "sha256": "6ce8b07c26bb7c8646580778cef7556b7c80259032d633e9484264f9a65b7344"
+        },
+        "11": {
+          "path": "rasters/precip_difference_m11.webp",
+          "bytes": 14834,
+          "sha256": "e9141b901270d1b7b414b0459ba0989b99299df093e9e4fb7fb9d7b781374fdb"
+        },
+        "12": {
+          "path": "rasters/precip_difference_m12.webp",
+          "bytes": 15364,
+          "sha256": "53e3a9706a44006d969fbc852743d410a1b944003450b18bd42a11eef8fcfc58"
+        },
+        "13": {
+          "path": "rasters/precip_difference_m13.webp",
+          "bytes": 29186,
+          "sha256": "ab9e4fab564148cf1397ca73a7aa9b1e5ab432754049541d7926f14b08cda477"
+        }
+      }
+    }
+  },
+  "validation": {
+    "master_count_ok": true,
+    "master_duplicates": 0,
+    "public_chunk_codes_sorted": true,
+    "window_row_counts_ok": true,
+    "mesh_order_matches_master": true,
+    "missing_values": 0,
+    "representative_values": [
+      {
+        "mesh_code": "53394611",
+        "values": {
+          "7": {
+            "1991_2020": 154.81,
+            "1996_2025": 157.68
+          },
+          "13": {
+            "1991_2020": 1583.43,
+            "1996_2025": 1588.96
+          }
+        }
+      }
+    ]
+  },
+  "wording": {
+    "difference": "30年平均値の更新差（1996–2025 − 1991–2020）",
+    "resolution": "気候平均は独自算出の全国陸域1kmメッシュ。季節予報は公式の地域単位。"
+  }
+}
