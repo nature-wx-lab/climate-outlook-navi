@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>気候ものさしナビ｜Nature Wx Lab</title>
+  <meta name="description" content="全国1kmメッシュのいつもの気候と、気象庁の1か月・3か月予報が示す地域的な傾向を同じ地点で読み比べる地図ツールです。">
+  <meta name="application-name" content="Climate Outlook Navi">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://nature-wx-lab.github.io/climate-outlook-navi/">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:site_name" content="Nature Wx Lab">
+  <meta property="og:title" content="気候ものさしナビ｜Climate Outlook Navi">
+  <meta property="og:description" content="全国1kmメッシュの気候平均を手掛かりに、気象庁の季節予報が示すこの先の傾向を読み解く地図ツールです。">
+  <meta property="og:url" content="https://nature-wx-lab.github.io/climate-outlook-navi/">
+  <meta name="twitter:card" content="summary">
+  <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
+  <link rel="stylesheet" href="./styles.css?v=20260710-mvp4b">
+</head>
+<body>
+  <header class="topbar">
+    <div class="product-title">
+      <h1>気候ものさしナビ</h1>
+      <p>あなたの場所の「いつもの気候」と「この先」を、地図でくらべる。</p>
+    </div>
+    <div class="header-actions">
+      <button id="settingsToggle" class="header-button settings-toggle" type="button">設定</button>
+      <button id="saveImage" class="header-button" type="button">画像保存</button>
+      <button id="copyLink" class="header-button" type="button">リンクコピー</button>
+      <span class="brand">Nature Wx Lab</span>
+      <nav class="sns-links" aria-label="Nature Wx Lab SNSリンク">
+        <a class="sns-link youtube" href="https://www.youtube.com/@nature_wx_lab" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4" fill="#ff0033"/><path d="M10 8.8v6.4l5.4-3.2z" fill="#fff"/></svg><span>YouTube</span>
+        </a>
+        <a class="sns-link" href="https://note.com/nature_wx_lab" target="_blank" rel="noopener noreferrer" aria-label="note"><b class="note-mark">n</b><span>note</span></a>
+        <a class="sns-link" href="https://x.com/nature_wx_lab" target="_blank" rel="noopener noreferrer" aria-label="X"><b class="x-mark">𝕏</b><span>X</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="control-panel" aria-label="表示設定">
+      <button id="settingsClose" class="panel-close" type="button" aria-label="設定を閉じる">×</button>
+      <section>
+        <h2>気候のものさし</h2>
+        <label>要素<select disabled><option>平均気温（第1段階）</option></select></label>
+        <label>月・年<select id="monthSelect" aria-label="表示する月・年"></select></label>
+        <div class="control-label">表示</div>
+        <div class="segmented two" id="modeControls">
+          <button class="active" data-mode="absolute" type="button">平均値</button>
+          <button data-mode="difference" type="button">更新差</button>
+        </div>
+        <div class="control-label">平均期間</div>
+        <div class="segmented stacked" id="windowControls">
+          <button data-window="1991_2020" type="button">1991–2020<br><small>気象庁平年期間・独自算出</small></button>
+          <button class="active" data-window="1996_2025" type="button">1996–2025<br><small>最新30年・独自算出</small></button>
+        </div>
+        <label class="range-row">気候面の濃さ<input id="climateOpacity" type="range" min="25" max="100" value="86"></label>
+        <p class="micro-note">更新差は重複する2つの30年平均の差です。30年間の温暖化量そのものではありません。</p>
+      </section>
+
+      <section>
+        <h2>この先の傾向</h2>
+        <label class="check-row"><input id="forecastToggle" type="checkbox" checked><span>季節予報の地域を重ねる</span></label>
+        <label>予報<select id="forecastProduct"><option value="P1M">1か月予報・気温</option><option value="P3M">3か月予報・気温</option></select></label>
+        <label>対象期間<select id="forecastTerm"></select></label>
+        <label class="range-row">地域面の濃さ<input id="forecastOpacity" type="range" min="8" max="55" value="28"></label>
+        <p class="micro-note">色は地域内で最も確率が高い階級。確率値を気温へ足したり、1kmへ補間したりしません。</p>
+      </section>
+
+      <section>
+        <h2>地図</h2>
+        <div class="segmented three">
+          <button data-base="blank" type="button">白地図</button>
+          <button class="active" data-base="pale" type="button">淡色</button>
+          <button data-base="standard" type="button">標準</button>
+        </div>
+        <div class="action-grid">
+          <button id="locate" type="button">現在地</button>
+          <button id="resetView" type="button">全国へ戻る</button>
+        </div>
+      </section>
+
+      <section class="status-card">
+        <h2>データ状況</h2>
+        <p id="sourceStatus">読み込み中</p>
+        <p>地図面は全国把握用の描画縮約です。クリック値は全387,717メッシュを保持した地点参照データから表示します。</p>
+      </section>
+    </aside>
+
+    <section class="map-shell" aria-label="気候地図">
+      <div id="mapInfo" class="map-info">データを読み込み中</div>
+      <div id="map"></div>
+
+      <aside class="climate-legend" aria-label="気候平均の凡例">
+        <strong id="climateLegendTitle">平均気温</strong>
+        <div id="climateLegend" class="legend-bar"></div>
+        <div class="legend-labels"><span id="legendLow">−27℃以下</span><span id="legendMiddle">0℃</span><span id="legendHigh">30℃超</span></div>
+        <small>気候平均側：独自算出1km面</small>
+      </aside>
+
+      <aside id="seasonLegend" class="season-legend" aria-label="季節予報の凡例">
+        <strong>季節予報・地域確率</strong>
+        <div class="season-keys"><span><i class="below"></i>低い</span><span><i class="normal"></i>平年並</span><span><i class="above"></i>高い</span><span><i class="tie"></i>同率首位</span></div>
+        <div id="seasonStatus" class="season-status">読み込み中</div>
+      </aside>
+
+      <div id="loading" class="loading-overlay" role="status"><div class="spinner"></div><p id="loadingText">読み込み中</p></div>
+      <div id="notice" class="notice" hidden></div>
+    </section>
+
+    <aside class="detail-panel" aria-label="地点詳細">
+      <button id="detailClose" class="panel-close" type="button" aria-label="地点詳細を閉じる">×</button>
+      <section class="selected-climate">
+        <h2>この1kmの気候</h2>
+        <span id="meshCode" class="eyebrow">地図をクリック</span>
+        <strong id="meshValue" class="primary-value">--</strong>
+        <p id="meshPeriod">1km気候平均を確認できます</p>
+        <p id="meshCoords" class="micro-note">海域には値を表示しません</p>
+        <div class="comparison-grid">
+          <div><span>1991–2020</span><b id="windowOldValue">--</b></div>
+          <div><span>1996–2025</span><b id="windowNewValue">--</b></div>
+          <div class="difference"><span>更新差</span><b id="differenceValue">--</b></div>
+        </div>
+      </section>
+
+      <section class="selected-forecast">
+        <h2>この地域の季節予報</h2>
+        <strong id="forecastRegion">地域レイヤ上で地点をクリック</strong>
+        <p id="forecastPeriod">対象期間を読み込み中</p>
+        <div class="probability-grid">
+          <div class="below"><span>低い</span><b id="probabilityBelow">--</b></div>
+          <div class="normal"><span>平年並</span><b id="probabilityNormal">--</b></div>
+          <div class="above"><span>高い</span><b id="probabilityAbove">--</b></div>
+        </div>
+        <p id="forecastNote" class="micro-note">気候平均と季節予報は異なる空間単位です。</p>
+      </section>
+
+      <section class="reading-guide">
+        <h2>読み方</h2>
+        <ol>
+          <li>1km気候面で「いつも何℃くらいか」を見る</li>
+          <li>地域予報の3確率で「この先どちらへ傾きそうか」を見る</li>
+          <li>確率は偏差量や地点の数値予報ではない</li>
+        </ol>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    気候平均：気象庁観測等をもとにNature Wx Labが独自算出・独自内挿した1km面（1991–2020 / 1996–2025）。季節予報：気象庁の地域別3階級確率。数値の定義・空間単位・不確実性を確認して利用してください。
+  </footer>
+
+  <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
+  <script type="module" src="./app.js?v=20260710-mvp4b"></script>
+</body>
+</html>

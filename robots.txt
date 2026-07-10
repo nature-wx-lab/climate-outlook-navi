@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nature-wx-lab.github.io/climate-outlook-navi/sitemap.xml
