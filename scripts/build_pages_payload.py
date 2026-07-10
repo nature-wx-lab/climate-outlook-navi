@@ -14,9 +14,7 @@ from pathlib import Path, PurePosixPath
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTROL_FILES = (
-    ".nojekyll",
-)
+CONTROL_FILES: tuple[str, ...] = ()
 
 PUBLIC_FILES = (
     "app.js",
