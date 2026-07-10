@@ -14,8 +14,11 @@ from pathlib import Path, PurePosixPath
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PUBLIC_FILES = (
+CONTROL_FILES = (
     ".nojekyll",
+)
+
+PUBLIC_FILES = (
     "app.js",
     "data.js",
     "index.html",
@@ -93,24 +96,33 @@ def main() -> None:
         shutil.rmtree(output)
     output.mkdir(parents=True)
 
-    for name in (*PUBLIC_FILES, *manifest_data_paths()):
+    for name in (*CONTROL_FILES, *PUBLIC_FILES, *manifest_data_paths()):
         copy_relative(name, output)
 
     climate_manifest = json.loads((output / "data/climate/manifest.json").read_text(encoding="utf-8"))
     season_manifest = json.loads((output / "data/season/manifest.json").read_text(encoding="utf-8"))
     files: dict[str, dict[str, int | str]] = {}
+    control_files: dict[str, dict[str, int | str]] = {}
     for path in sorted(output.rglob("*")):
         if path.is_file():
             rel = path.relative_to(output).as_posix()
-            files[rel] = {"bytes": path.stat().st_size, "sha256": sha256_path(path)}
+            entry = {"bytes": path.stat().st_size, "sha256": sha256_path(path)}
+            if rel in CONTROL_FILES:
+                control_files[rel] = entry
+            else:
+                files[rel] = entry
     deployment = {
-        "schema_version": 1,
+        "schema_version": 2,
         "source_commit": source_commit(),
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "climate_dataset_id": climate_manifest["dataset_id"],
         "season_dataset_id": season_manifest["dataset_id"],
-        "file_count_without_deployment_manifest": len(files),
-        "total_bytes_without_deployment_manifest": sum(int(entry["bytes"]) for entry in files.values()),
+        "file_count_without_deployment_manifest": len(files) + len(control_files),
+        "total_bytes_without_deployment_manifest": sum(
+            int(entry["bytes"]) for entry in (*files.values(), *control_files.values())
+        ),
+        "publicly_verifiable_file_count": len(files),
+        "control_files": control_files,
         "files": files,
     }
     (output / "deployment.json").write_text(
@@ -121,7 +133,7 @@ def main() -> None:
         "source_commit": deployment["source_commit"],
         "climate_dataset_id": deployment["climate_dataset_id"],
         "season_dataset_id": deployment["season_dataset_id"],
-        "file_count": len(files) + 1,
+        "file_count": deployment["file_count_without_deployment_manifest"] + 1,
         "total_bytes": deployment["total_bytes_without_deployment_manifest"] + (output / "deployment.json").stat().st_size,
     }, ensure_ascii=False, indent=2))
 

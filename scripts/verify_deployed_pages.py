@@ -33,7 +33,7 @@ def fetch(url: str, attempts: int = 3) -> bytes:
             if attempt + 1 < attempts:
                 time.sleep(2)
     assert last_error is not None
-    raise last_error
+    raise RuntimeError(f"failed to fetch {url} after {attempts} attempts: {last_error}") from last_error
 
 
 def main() -> None:
@@ -56,7 +56,10 @@ def main() -> None:
 
     def verify(entry: tuple[str, dict[str, int | str]]) -> tuple[str, int]:
         path, expected = entry
-        raw = fetch(urllib.parse.urljoin(base_url, path))
+        try:
+            raw = fetch(urllib.parse.urljoin(base_url, path))
+        except Exception as error:  # noqa: BLE001 - include the exact failed deployment path
+            raise RuntimeError(f"failed to verify deployed file {path}: {error}") from error
         if len(raw) != expected["bytes"]:
             raise AssertionError(f"deployed byte count mismatch: {path}")
         if hashlib.sha256(raw).hexdigest() != expected["sha256"]:
