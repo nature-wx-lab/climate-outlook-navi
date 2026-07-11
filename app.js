@@ -1,5 +1,5 @@
 import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260710-elements1";
-import { ClimateMap } from "./map.js?v=20260710-elements1";
+import { ClimateMap } from "./map.js?v=20260711-view1";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
 const ELEMENT_FALLBACKS = {
@@ -248,6 +248,13 @@ function populateMonths() {
   elements.monthSelect.value = String(state.month);
 }
 
+function optionalNumberParam(params, key) {
+  const raw = params.get(key);
+  if (raw === null || raw.trim() === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 function parseInitialState() {
   const params = new URLSearchParams(location.search);
   if (["1991_2020", "1996_2025"].includes(params.get("window"))) state.window = params.get("window");
@@ -265,13 +272,13 @@ function parseInitialState() {
   if (["blank", "pale", "standard"].includes(params.get("base"))) state.base = params.get("base");
   if (/^\d{8}$/.test(params.get("mesh") || "")) state.meshCode = params.get("mesh");
   if (/^(hoppo|\d{6})$/.test(params.get("region") || "")) state.regionCode = params.get("region");
-  const lat = Number(params.get("lat"));
-  const lon = Number(params.get("lon"));
-  const zoom = Number(params.get("z"));
+  const lat = optionalNumberParam(params, "lat");
+  const lon = optionalNumberParam(params, "lon");
+  const zoom = optionalNumberParam(params, "z");
   return {
-    lat: Number.isFinite(lat) ? lat : null,
-    lon: Number.isFinite(lon) ? lon : null,
-    zoom: Number.isFinite(zoom) ? Math.min(12, Math.max(4, zoom)) : null,
+    lat,
+    lon,
+    zoom: zoom === null ? null : Math.min(12, Math.max(4, zoom)),
   };
 }
 
@@ -851,7 +858,7 @@ async function initialize() {
     applyControls();
     map.setBase(state.base);
     if (initialView.lat !== null && initialView.lon !== null) {
-      map.setView(initialView.lat, initialView.lon, initialView.zoom || 5);
+      map.setView(initialView.lat, initialView.lon, initialView.zoom);
     }
     const prefectures = store.prefecturePath();
     if (prefectures) await map.setBoundaries(prefectures);

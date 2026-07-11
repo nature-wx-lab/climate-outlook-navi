@@ -1,5 +1,7 @@
-const JAPAN_BOUNDS = L.latLngBounds([19.5, 121.5], [46.8, 154.8]);
-const START_VIEW = { center: [37.2, 137.2], zoom: 5 };
+const START_VIEW = Object.freeze({
+  center: [37.2, 137.2],
+  zoom: 5,
+});
 const BASES = {
   blank: null,
   pale: {
@@ -193,11 +195,11 @@ export class ClimateMap {
   }
 
   resetView() {
-    this.map.fitBounds(JAPAN_BOUNDS, { padding: [10, 10] });
+    this.map.setView(START_VIEW.center, START_VIEW.zoom);
   }
 
   setView(lat, lon, zoom) {
-    this.map.setView([lat, lon], zoom);
+    this.map.setView([lat, lon], Number.isFinite(zoom) ? zoom : START_VIEW.zoom);
   }
 
   viewState() {

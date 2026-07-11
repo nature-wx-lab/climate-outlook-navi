@@ -833,9 +833,24 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
                 hits.append(f"{label}:{path.relative_to(site_root)}")
     require(not hits, f"release hygiene hits: {hits}")
     index = (site_root / "index.html").read_text(encoding="utf-8")
+    app_script = (site_root / "app.js").read_text(encoding="utf-8")
+    map_script = (site_root / "map.js").read_text(encoding="utf-8")
     require("./vendor/leaflet-1.9.4/leaflet.js" in index, "Leaflet must be locally vendored")
     require("unpkg.com" not in index, "external Leaflet CDN dependency remains")
-    return {"text_files_scanned": scanned, "blocked_hits": len(hits), "local_leaflet": True}
+    require("<h2>気候のものさし</h2>" not in index, "duplicate climate control heading remains")
+    require(re.search(r"zoom:\s*5\b", map_script) is not None, "start zoom must be 5")
+    require("this.map.setView(START_VIEW.center, START_VIEW.zoom);" in map_script, "reset view must use the start view")
+    require(
+        'if (raw === null || raw.trim() === "") return null;' in app_script,
+        "missing numeric URL parameters must remain unset",
+    )
+    return {
+        "text_files_scanned": scanned,
+        "blocked_hits": len(hits),
+        "local_leaflet": True,
+        "start_zoom": 5,
+        "duplicate_control_heading": False,
+    }
 
 
 def main() -> None:
