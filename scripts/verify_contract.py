@@ -846,9 +846,21 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "missing numeric URL parameters must remain unset",
     )
     require("stroke: false" in map_script, "season forecast region strokes must be hidden")
+    require("filter: (feature) => Boolean(resolved[feature.properties.code])" in map_script, "empty season features must not intercept point selection")
     require("dashArray" not in map_script, "season forecast dashed region boundaries remain")
     require("weight: 1.15" in map_script, "prefecture boundary weight must match the map default")
     require("border: 1px dashed" not in styles, "season legend still implies dashed region boundaries")
+    require('id="pointState"' in index, "point preview/fixed state indicator is missing")
+    require('id="pointUnpin"' in index, "point unpin control is missing")
+    require('id="pointMonthlyChart"' in index, "fixed-point monthly chart is missing")
+    require('id="pointChartTableBody"' in index, "accessible monthly value table is missing")
+    require('id="pointChartNote"' in index, "monthly/annual distinction note is missing")
+    require('(hover: hover) and (pointer: fine)' in app_script, "live point preview must be limited to fine hover pointers")
+    require('elements.pointChartSection.hidden = selection?.kind !== "pinned"' in app_script, "monthly chart must remain pinned-only")
+    require('elements.pointUnpin.addEventListener("click", clearPinnedSelection)' in app_script, "point unpin control is not wired")
+    require('document.body.classList.toggle("has-preview"' in app_script, "narrow live preview visibility state is missing")
+    require("selectionPending" in app_script, "point selection/hover race guard is missing")
+    require("HOVER_INTERVAL_MS = 100" in app_script, "live point preview throttle contract changed")
     return {
         "text_files_scanned": scanned,
         "blocked_hits": len(hits),
@@ -857,6 +869,9 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "duplicate_control_heading": False,
         "prefecture_boundary_only": True,
         "season_region_stroke": False,
+        "live_cursor_preview": True,
+        "click_to_pin": True,
+        "pinned_monthly_chart": True,
     }
 
 

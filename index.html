@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f7883'/%3E%3Cpath d='M17 44V20h7l16 15V20h7v24h-7L24 29v15z' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="./styles.css?v=20260711-boundary1">
+  <link rel="stylesheet" href="./styles.css?v=20260711-pointdetail1">
 </head>
 <body>
   <header class="topbar">
@@ -113,16 +113,40 @@
     <aside class="detail-panel" aria-label="地点詳細">
       <button id="detailClose" class="panel-close" type="button" aria-label="地点詳細を閉じる">×</button>
       <section class="selected-climate">
-        <h2>この1kmの気候</h2>
-        <span id="meshCode" class="eyebrow">地図をクリック</span>
+        <div class="point-heading-row">
+          <h2>この1kmの気候</h2>
+          <button id="pointUnpin" class="point-unpin" type="button" hidden>固定解除</button>
+        </div>
+        <div class="point-meta">
+          <span id="pointState" class="point-state" data-state="idle">カーソルで確認・クリックで固定</span>
+          <span id="meshCode" class="eyebrow">地点未選択</span>
+        </div>
         <strong id="meshValue" class="primary-value">--</strong>
-        <p id="meshPeriod">1km気候平均を確認できます</p>
+        <p id="meshPeriod">地図上のカーソル位置を表示します</p>
         <p id="meshCoords" class="micro-note">海域には値を表示しません</p>
         <div class="comparison-grid">
           <div><span>1991–2020</span><b id="windowOldValue">--</b></div>
           <div><span>1996–2025</span><b id="windowNewValue">--</b></div>
           <div class="difference"><span>更新差</span><b id="differenceValue">--</b></div>
         </div>
+      </section>
+
+      <section id="pointChartSection" class="point-chart-section" aria-labelledby="pointChartTitle" hidden>
+        <div class="point-chart-heading">
+          <h2 id="pointChartTitle">固定地点の月別グラフ</h2>
+          <span id="pointChartMeasure" class="point-chart-measure">月別気候平均</span>
+        </div>
+        <div class="point-chart-legend" aria-hidden="true">
+          <span class="chart-key old">1991–2020</span>
+          <span class="chart-key new">1996–2025</span>
+        </div>
+        <svg id="pointMonthlyChart" class="point-monthly-chart" viewBox="0 0 268 150" role="img" aria-labelledby="pointChartTitle pointChartCaption"></svg>
+        <table class="visually-hidden">
+          <caption id="pointChartCaption">固定地点の月別気候平均</caption>
+          <thead><tr><th>月</th><th>1991–2020</th><th>1996–2025</th></tr></thead>
+          <tbody id="pointChartTableBody"></tbody>
+        </table>
+        <p id="pointChartNote" class="micro-note">2つの30年平均を月別に比較。季節予報の推移ではありません。</p>
       </section>
 
       <section class="selected-forecast">
@@ -153,6 +177,6 @@
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260711-boundary1"></script>
+  <script type="module" src="./app.js?v=20260711-pointdetail1"></script>
 </body>
 </html>

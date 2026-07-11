@@ -1,5 +1,5 @@
 import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260710-elements1";
-import { ClimateMap } from "./map.js?v=20260711-boundary1";
+import { ClimateMap } from "./map.js?v=20260711-pointdetail1";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
 const ELEMENT_FALLBACKS = {
@@ -59,6 +59,7 @@ const state = {
   base: "pale",
   meshCode: null,
   selectedMesh: null,
+  preview: null,
   regionCode: null,
   regionName: null,
   selectedForecast: null,
@@ -71,11 +72,12 @@ const elements = Object.fromEntries([
   "forecastProductField", "forecastTermField", "forecastOpacityField", "forecastControlNote",
   "climateLegend", "climateLegendTitle", "legendLow", "legendMiddle", "legendHigh",
   "seasonLegend", "seasonKeys", "seasonClassBelow", "seasonClassNormal", "seasonClassAbove",
-  "seasonStatus", "sourceStatus", "meshCode", "meshValue", "meshPeriod", "meshCoords",
+  "seasonStatus", "sourceStatus", "pointState", "pointUnpin", "meshCode", "meshValue", "meshPeriod", "meshCoords",
   "windowOldValue", "windowNewValue", "differenceValue", "forecastRegion", "forecastPeriod",
   "probabilityBelowLabel", "probabilityNormalLabel", "probabilityAboveLabel",
   "probabilityBelow", "probabilityNormal", "probabilityAbove", "forecastNote", "copyLink",
   "saveImage", "locate", "resetView", "notice", "settingsToggle", "settingsClose", "detailClose",
+  "pointChartSection", "pointChartMeasure", "pointMonthlyChart", "pointChartCaption", "pointChartTableBody", "pointChartNote",
 ].map((id) => [id, document.getElementById(id)]));
 
 function firstDefined(...values) {
@@ -194,6 +196,131 @@ function selectedValue(record = state.selectedMesh) {
   return state.mode === "difference" ? newValue - oldValue : record.values[state.window]?.[state.month];
 }
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+const OLD_WINDOW = "1991_2020";
+const NEW_WINDOW = "1996_2025";
+
+function svgNode(name, attributes = {}, text = null) {
+  const node = document.createElementNS(SVG_NS, name);
+  Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
+  if (text !== null) node.textContent = text;
+  return node;
+}
+
+function niceStep(rawStep) {
+  if (!Number.isFinite(rawStep) || rawStep <= 0) return 1;
+  const power = 10 ** Math.floor(Math.log10(rawStep));
+  const fraction = rawStep / power;
+  const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+  return niceFraction * power;
+}
+
+function chartScale(values) {
+  const finite = values.filter(Number.isFinite);
+  if (!finite.length) return null;
+  const actualMin = Math.min(...finite);
+  const actualMax = Math.max(...finite);
+  let spread = actualMax - actualMin;
+  if (spread === 0) spread = Math.max(Math.abs(actualMax) * 0.2, 1);
+  const resolution = 10 ** -elementConfig().decimals;
+  const step = niceStep(Math.max(spread / 4, resolution));
+  let minimum = Math.floor((actualMin - spread * 0.08) / step) * step;
+  let maximum = Math.ceil((actualMax + spread * 0.08) / step) * step;
+  if (actualMin >= 0 && minimum < 0) minimum = 0;
+  if ((maximum - minimum) / step < 2) maximum = minimum + step * 3;
+  if (maximum <= minimum) maximum = minimum + step;
+  const ticks = [];
+  for (let value = minimum; value <= maximum + step * 0.25; value += step) ticks.push(value);
+  return { minimum, maximum, step, ticks };
+}
+
+function axisLabel(value, step) {
+  const decimals = Math.abs(step) < 1 ? Math.min(2, Math.max(1, elementConfig().decimals)) : 0;
+  return normalizedNumber(value, decimals).toFixed(decimals);
+}
+
+function monthlySeries(record) {
+  const months = store.climateManifest.months
+    .filter((month) => Number(month.id) >= 1 && Number(month.id) <= 12)
+    .map((month) => ({ id: Number(month.id), label: month.label }));
+  return {
+    months,
+    oldValues: months.map((month) => record.values[OLD_WINDOW]?.[month.id] ?? null),
+    newValues: months.map((month) => record.values[NEW_WINDOW]?.[month.id] ?? null),
+  };
+}
+
+function renderMonthlyChart(record) {
+  const svg = elements.pointMonthlyChart;
+  svg.replaceChildren();
+  const series = monthlySeries(record);
+  const scale = chartScale([...series.oldValues, ...series.newValues]);
+  const config = elementConfig();
+  elements.pointChartMeasure.textContent = `${config.name}（${config.unit}）`;
+  const annualNote = Number(state.month) === 13
+    ? state.element === "501"
+      ? "表示中の年値は、月別12点の最大値ではありません。"
+      : "表示中の年値は、この月別グラフから再計算した値ではありません。"
+    : "";
+  elements.pointChartNote.textContent = `2つの30年平均を月別に比較。季節予報の推移ではありません。${annualNote ? ` ${annualNote}` : ""}`;
+  elements.pointChartCaption.textContent = `1kmメッシュ ${record.meshCode} の${config.name}。1991–2020年平均と1996–2025年平均の1月から12月までの比較。`;
+  elements.pointChartTableBody.innerHTML = series.months.map((month, index) => (
+    `<tr><th>${escapeHtml(month.label)}</th><td>${escapeHtml(formatClimateValue(series.oldValues[index]))}</td><td>${escapeHtml(formatClimateValue(series.newValues[index]))}</td></tr>`
+  )).join("");
+
+  if (!scale) {
+    svg.append(svgNode("text", { x: 134, y: 76, "text-anchor": "middle" }, "月別値がありません"));
+    return;
+  }
+
+  const plot = { left: 36, right: 248, top: 10, bottom: 124 };
+  const xAt = (index) => plot.left + ((plot.right - plot.left) * index) / 11;
+  const yAt = (value) => plot.bottom - ((value - scale.minimum) / (scale.maximum - scale.minimum)) * (plot.bottom - plot.top);
+  const activeIndex = Number(state.month) >= 1 && Number(state.month) <= 12 ? Number(state.month) - 1 : -1;
+  if (activeIndex >= 0) {
+    svg.append(svgNode("rect", {
+      x: xAt(activeIndex) - 8, y: plot.top, width: 16, height: plot.bottom - plot.top,
+      fill: "#176f7d", "fill-opacity": 0.08,
+    }));
+  }
+
+  scale.ticks.forEach((value) => {
+    const y = yAt(value);
+    svg.append(svgNode("line", { x1: plot.left, y1: y, x2: plot.right, y2: y, stroke: "#d7e1e5", "stroke-width": 1 }));
+    svg.append(svgNode("text", { x: plot.left - 4, y: y + 3, "text-anchor": "end" }, axisLabel(value, scale.step)));
+  });
+
+  series.months.forEach((month, index) => {
+    const x = xAt(index);
+    svg.append(svgNode("line", { x1: x, y1: plot.bottom, x2: x, y2: plot.bottom + 3, stroke: "#8da0a8", "stroke-width": 1 }));
+    svg.append(svgNode("text", { x, y: 141, "text-anchor": "middle" }, String(month.id)));
+  });
+  svg.append(svgNode("text", { x: 264, y: 141, "text-anchor": "end" }, "月"));
+
+  const drawSeries = (values, color, dashed) => {
+    let path = "";
+    values.forEach((value, index) => {
+      if (!Number.isFinite(value)) return;
+      const command = index === 0 || !Number.isFinite(values[index - 1]) ? "M" : "L";
+      path += `${command}${xAt(index).toFixed(2)},${yAt(value).toFixed(2)} `;
+    });
+    if (path) {
+      svg.append(svgNode("path", {
+        d: path.trim(), fill: "none", stroke: color, "stroke-width": 2,
+        ...(dashed ? { "stroke-dasharray": "5 3" } : {}),
+      }));
+    }
+    values.forEach((value, index) => {
+      if (!Number.isFinite(value)) return;
+      const circle = svgNode("circle", { cx: xAt(index), cy: yAt(value), r: 2.25, fill: "#fff", stroke: color, "stroke-width": 1.5 });
+      circle.append(svgNode("title", {}, `${index + 1}月 ${formatClimateValue(value)}`));
+      svg.append(circle);
+    });
+  };
+  drawSeries(series.oldValues, "#687c85", true);
+  drawSeries(series.newValues, "#0f7883", false);
+}
+
 const map = new ClimateMap("map", {
   onMapClick: (latlng) => selectAtLatLon(latlng.lat, latlng.lng),
   onRegionClick: (selection) => selectAtLatLon(selection.latlng.lat, selection.latlng.lng, selection),
@@ -201,7 +328,7 @@ const map = new ClimateMap("map", {
     if (state.initialized) syncUrl();
   },
   onPointerMove: (latlng) => scheduleHover(latlng),
-  onPointerLeave: () => clearHover(),
+  onPointerLeave: () => clearPreview(),
   onClimateLoad: () => setNotice("気候面を表示しました", "ok"),
   onClimateError: () => setNotice("気候面を読み込めませんでした", "error"),
 });
@@ -526,31 +653,44 @@ function updateStatus() {
   elements.mapInfo.textContent = `${climateSubtitle()}${overlay}`;
 }
 
+let selectionSequence = 0;
+let selectionPending = false;
+
 async function selectAtLatLon(lat, lon, regionSelection = null, options = {}) {
   const code = meshCodeFromLatLon(lat, lon);
   if (!code) return;
-  const previousCode = state.meshCode;
+  const sequence = ++selectionSequence;
+  selectionPending = true;
+  clearPreview({ render: false });
   setNotice(`1kmメッシュ ${code} を確認中…`);
   const requestedElement = state.element;
-  const record = await store.meshRecord(code, requestedElement);
-  if (requestedElement !== state.element) return;
-  if (!record) {
-    if (previousCode !== code) {
-      state.meshCode = null;
-      state.selectedMesh = null;
-      if (!regionSelection) {
-        state.regionCode = null;
-        state.regionName = null;
-        state.selectedForecast = null;
-      }
+  let record;
+  try {
+    record = await store.meshRecord(code, requestedElement);
+  } catch (error) {
+    if (sequence === selectionSequence) {
+      selectionPending = false;
+      setNotice(`地点値を取得できませんでした: ${error.message}`, "error");
     }
-    renderSelected();
+    return;
+  }
+  if (sequence !== selectionSequence || requestedElement !== state.element) return;
+  selectionPending = false;
+  if (!record) {
+    if (!state.selectedMesh) {
+      state.meshCode = null;
+      state.regionCode = null;
+      state.regionName = null;
+      state.selectedForecast = null;
+      map.selectMesh(null, null);
+      renderSelected();
+      syncUrl();
+    }
     setNotice("この1kmメッシュには気候値がありません（海域など）", "warn");
     return;
   }
   state.meshCode = code;
   state.selectedMesh = record;
-  document.body.classList.add("has-selection");
   document.body.classList.remove("detail-mobile-closed", "settings-open");
   const context = forecastContext(false);
   if (regionSelection && context.canOverlay) {
@@ -570,23 +710,77 @@ async function selectAtLatLon(lat, lon, regionSelection = null, options = {}) {
   map.selectMesh(code, meshBounds(code), options.pan === true);
   renderSelected();
   syncUrl();
-  if (!options.quiet) setNotice(`1kmメッシュ ${code} を選択しました`, "ok");
+  if (!options.quiet) setNotice(`1kmメッシュ ${code} を固定しました`, "ok");
+}
+
+function clearPinnedSelection() {
+  selectionSequence += 1;
+  selectionPending = false;
+  clearPreview({ render: false });
+  state.meshCode = null;
+  state.selectedMesh = null;
+  state.regionCode = null;
+  state.regionName = null;
+  state.selectedForecast = null;
+  map.selectMesh(null, null);
+  document.body.classList.remove("detail-mobile-closed");
+  renderSelected();
+  syncUrl();
+  setNotice("地点の固定を解除しました", "ok");
+}
+
+function pointForecast(selection, context) {
+  if (!selection || !context.canOverlay) return { regionCode: null, regionName: null, forecast: null };
+  if (selection.kind === "pinned") {
+    return { regionCode: state.regionCode, regionName: state.regionName, forecast: state.selectedForecast };
+  }
+  if (!selection.record) return { regionCode: null, regionName: null, forecast: null };
+  const feature = store.regionAtLatLon(selection.record.centerLat, selection.record.centerLon);
+  const regionCode = feature?.properties.code || null;
+  return {
+    regionCode,
+    regionName: feature?.properties.name || null,
+    forecast: regionCode ? context.term?.regions?.[regionCode] || null : null,
+  };
 }
 
 function renderSelected() {
-  const record = state.selectedMesh?.elementCode === state.element ? state.selectedMesh : null;
-  if (!record) {
-    document.body.classList.remove("has-selection");
-    elements.meshCode.textContent = "地図をクリック";
+  const pinnedRecord = state.selectedMesh?.elementCode === state.element ? state.selectedMesh : null;
+  const preview = !pinnedRecord && state.preview?.elementCode === state.element ? state.preview : null;
+  const selection = pinnedRecord
+    ? { kind: "pinned", status: "ready", record: pinnedRecord, meshCode: pinnedRecord.meshCode }
+    : preview ? { kind: "preview", ...preview } : null;
+  const record = selection?.record || null;
+  document.body.classList.toggle("has-selection", Boolean(pinnedRecord));
+  document.body.classList.toggle("has-preview", Boolean(preview));
+  elements.pointUnpin.hidden = selection?.kind !== "pinned";
+  elements.pointChartSection.hidden = selection?.kind !== "pinned" || !record;
+
+  if (!selection) {
+    elements.pointState.dataset.state = "idle";
+    elements.pointState.textContent = "カーソルで確認・クリックで固定";
+    elements.meshCode.textContent = "地点未選択";
     elements.meshValue.textContent = "--";
-    elements.meshPeriod.textContent = "1km気候平均を確認できます";
+    elements.meshPeriod.textContent = "地図上のカーソル位置を表示します";
     elements.meshCoords.textContent = "海域には値を表示しません";
     elements.windowOldValue.textContent = "--";
     elements.windowNewValue.textContent = "--";
     elements.differenceValue.textContent = "--";
+  } else if (!record) {
+    elements.pointState.dataset.state = "preview";
+    elements.pointState.textContent = "カーソル位置（プレビュー）";
+    elements.meshCode.textContent = `1kmメッシュ ${selection.meshCode}`;
+    elements.meshValue.textContent = "--";
+    elements.meshPeriod.textContent = selection.status === "error" ? "地点値を取得できませんでした" : "このメッシュには気候値がありません";
+    elements.meshCoords.textContent = "海域など、地点参照データのない場所です";
+    elements.windowOldValue.textContent = "--";
+    elements.windowNewValue.textContent = "--";
+    elements.differenceValue.textContent = "--";
   } else {
-    const oldValue = record.values["1991_2020"]?.[state.month];
-    const newValue = record.values["1996_2025"]?.[state.month];
+    const oldValue = record.values[OLD_WINDOW]?.[state.month];
+    const newValue = record.values[NEW_WINDOW]?.[state.month];
+    elements.pointState.dataset.state = selection.kind;
+    elements.pointState.textContent = selection.kind === "pinned" ? "選択地点（固定）" : "カーソル位置（プレビュー）";
     elements.meshCode.textContent = `1kmメッシュ ${record.meshCode}`;
     elements.meshValue.textContent = formatClimateValue(selectedValue(record), state.mode === "difference");
     elements.meshPeriod.textContent = climateSubtitle();
@@ -596,13 +790,15 @@ function renderSelected() {
     elements.differenceValue.textContent = Number.isFinite(oldValue) && Number.isFinite(newValue)
       ? formatClimateValue(newValue - oldValue, true)
       : "--";
+    if (selection.kind === "pinned") renderMonthlyChart(record);
   }
 
   const context = forecastContext(false);
+  const displayed = pointForecast(selection, context);
   updateForecastClassLabels(context.labels);
-  if (state.selectedForecast && context.canOverlay) {
-    const probabilities = state.selectedForecast.probabilities;
-    elements.forecastRegion.textContent = `${state.regionName || state.regionCode}｜${state.selectedForecast.forecast_region_name}`;
+  if (displayed.forecast && context.canOverlay) {
+    const probabilities = displayed.forecast.probabilities;
+    elements.forecastRegion.textContent = `${displayed.regionName || displayed.regionCode}｜${displayed.forecast.forecast_region_name}`;
     elements.forecastPeriod.textContent = periodLabel(context.term);
     elements.probabilityBelow.textContent = `${probabilities[0]}%`;
     elements.probabilityNormal.textContent = `${probabilities[1]}%`;
@@ -610,46 +806,91 @@ function renderSelected() {
     elements.forecastNote.textContent = `${forecastLeadLabel(probabilities, context.labels)}。この地点が属する予報地域の確率で、1km地点予報ではありません。`;
   } else {
     elements.forecastRegion.textContent = context.reason
-      || (state.regionCode && context.canOverlay
-        ? `${state.regionName || state.regionCode}｜この地域は発表なし`
-        : state.forecastVisible ? "地域レイヤ上で地点をクリック" : "季節予報レイヤはOFF");
+      || (displayed.regionCode && context.canOverlay
+        ? `${displayed.regionName || displayed.regionCode}｜この地域は発表なし`
+        : state.forecastVisible ? "カーソル位置または固定地点で確認" : "季節予報レイヤはOFF");
     elements.forecastPeriod.textContent = periodLabel(context.term);
     elements.probabilityBelow.textContent = "--";
     elements.probabilityNormal.textContent = "--";
     elements.probabilityAbove.textContent = "--";
     elements.forecastNote.textContent = context.reason
-      || (state.regionCode && context.canOverlay
+      || (displayed.regionCode && context.canOverlay
         ? "発表のある地域だけを着色しています。欠色地域を0%として扱わないでください。"
         : "気候平均と季節予報は異なる空間単位です。");
   }
 }
 
-let hoverTimer;
+const HOVER_INTERVAL_MS = 100;
+let hoverTimer = null;
 let hoverSequence = 0;
-function scheduleHover(latlng) {
-  clearTimeout(hoverTimer);
-  if (!state.initialized || map.viewState().zoom < 7) {
-    map.hideHover();
-    return;
-  }
-  const sequence = ++hoverSequence;
-  const requestedElement = state.element;
-  hoverTimer = setTimeout(async () => {
-    const code = meshCodeFromLatLon(latlng.lat, latlng.lng);
-    const record = code ? await store.meshRecord(code, requestedElement).catch(() => null) : null;
-    if (sequence !== hoverSequence || requestedElement !== state.element || !record) {
-      map.hideHover();
-      return;
-    }
-    const value = selectedValue(record);
-    map.showHover(latlng, `<b>${formatClimateValue(value, state.mode === "difference")}</b><br>1kmメッシュ ${escapeHtml(code)}<br>${escapeHtml(elementConfig().name)}・${escapeHtml(monthLabel())}`);
-  }, 130);
+let hoverLastStarted = 0;
+let pendingHover = null;
+let latestHoverKey = null;
+
+function supportsLivePreview() {
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
 
-function clearHover() {
-  clearTimeout(hoverTimer);
+function queueHover() {
+  if (hoverTimer !== null || !pendingHover) return;
+  const delay = Math.max(0, HOVER_INTERVAL_MS - (performance.now() - hoverLastStarted));
+  hoverTimer = setTimeout(processHover, delay);
+}
+
+async function processHover() {
+  hoverTimer = null;
+  const request = pendingHover;
+  pendingHover = null;
+  if (!request) return;
+  hoverLastStarted = performance.now();
+  let record = null;
+  let status = "empty";
+  try {
+    record = await store.meshRecord(request.meshCode, request.elementCode);
+    status = record ? "ready" : "empty";
+  } catch {
+    status = "error";
+  }
+  if (request.sequence === hoverSequence && request.elementCode === state.element && !state.selectedMesh) {
+    state.preview = { ...request, status, record };
+    renderSelected();
+  }
+  queueHover();
+}
+
+function scheduleHover(latlng) {
+  if (!state.initialized || state.selectedMesh || selectionPending || !supportsLivePreview()) {
+    if (state.preview) clearPreview();
+    return;
+  }
+  const code = meshCodeFromLatLon(latlng.lat, latlng.lng);
+  if (!code) {
+    clearPreview();
+    return;
+  }
+  const key = `${state.element}:${code}`;
+  if (key === latestHoverKey) return;
+  latestHoverKey = key;
+  const sequence = ++hoverSequence;
+  pendingHover = {
+    sequence,
+    elementCode: state.element,
+    meshCode: code,
+    lat: latlng.lat,
+    lon: latlng.lng,
+  };
+  queueHover();
+}
+
+function clearPreview({ render = true } = {}) {
+  if (hoverTimer !== null) clearTimeout(hoverTimer);
+  hoverTimer = null;
+  pendingHover = null;
+  latestHoverKey = null;
   hoverSequence += 1;
-  map.hideHover();
+  const hadPreview = Boolean(state.preview);
+  state.preview = null;
+  if (render && hadPreview) renderSelected();
 }
 
 function buildUrl() {
@@ -705,7 +946,9 @@ async function switchElement(code) {
   const previousMesh = state.meshCode;
   elements.elementSelect.disabled = true;
   setLoading(true, "気候要素を切り替えています");
-  clearHover();
+  selectionSequence += 1;
+  selectionPending = false;
+  clearPreview();
   state.selectedForecast = null;
   state.regionCode = null;
   state.regionName = null;
@@ -738,6 +981,7 @@ function bindControls() {
   elements.settingsToggle.addEventListener("click", () => document.body.classList.toggle("settings-open"));
   elements.settingsClose.addEventListener("click", () => document.body.classList.remove("settings-open"));
   elements.detailClose.addEventListener("click", () => document.body.classList.add("detail-mobile-closed"));
+  elements.pointUnpin.addEventListener("click", clearPinnedSelection);
   elements.elementSelect.addEventListener("change", () => switchElement(elements.elementSelect.value));
   document.querySelectorAll("[data-window]").forEach((button) => button.addEventListener("click", () => {
     state.window = button.dataset.window;

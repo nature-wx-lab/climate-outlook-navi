@@ -72,12 +72,12 @@ export class ClimateMap {
     this.seasonLayer = null;
     this.boundaryLayer = null;
     this.selectionLayer = null;
-    this.hoverTooltip = L.tooltip({ direction: "top", offset: [0, -6], opacity: 0.94, className: "climate-tooltip" });
     this.setBase("pale");
     this.map.on("click", (event) => this.handlers.onMapClick?.(event.latlng));
     this.map.on("moveend zoomend", () => this.handlers.onViewChange?.(this.viewState()));
     this.map.on("mousemove", (event) => this.handlers.onPointerMove?.(event.latlng));
-    this.map.on("mouseout", () => this.handlers.onPointerLeave?.());
+    this.map.getContainer().addEventListener("mouseleave", () => this.handlers.onPointerLeave?.());
+    this.map.on("movestart zoomstart", () => this.handlers.onPointerLeave?.());
   }
 
   setBase(id) {
@@ -140,6 +140,8 @@ export class ClimateMap {
     this.seasonLayer = L.geoJSON(regions, {
       pane: "seasonPane",
       renderer: this.seasonRenderer,
+      bubblingMouseEvents: false,
+      filter: (feature) => Boolean(resolved[feature.properties.code]),
       style: (feature) => {
         const forecast = resolved[feature.properties.code];
         const dominant = forecast ? dominantClass(forecast.probabilities) : -1;
@@ -182,14 +184,6 @@ export class ClimateMap {
     }).addTo(this.map);
     this.selectionLayer.bindTooltip(`1kmメッシュ ${meshCode}`, { permanent: false, direction: "top" });
     if (pan) this.map.setView([bounds.centerLat, bounds.centerLon], Math.max(this.map.getZoom(), 9));
-  }
-
-  showHover(latlng, html) {
-    this.hoverTooltip.setLatLng(latlng).setContent(html).addTo(this.map);
-  }
-
-  hideHover() {
-    this.map.removeLayer(this.hoverTooltip);
   }
 
   resetView() {
