@@ -1,5 +1,5 @@
 import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260710-elements1";
-import { ClimateMap } from "./map.js?v=20260711-view1";
+import { ClimateMap } from "./map.js?v=20260711-boundary1";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
 const ELEMENT_FALLBACKS = {

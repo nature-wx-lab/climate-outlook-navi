@@ -109,7 +109,7 @@ export class ClimateMap {
       pane: "boundaryPane",
       renderer: this.boundaryRenderer,
       interactive: false,
-      style: { color: "#273a47", weight: 0.65, opacity: 0.82, fill: false },
+      style: { color: "#1e2328", weight: 1.15, opacity: 0.72, fill: false },
     }).addTo(this.map);
   }
 
@@ -144,10 +144,8 @@ export class ClimateMap {
         const forecast = resolved[feature.properties.code];
         const dominant = forecast ? dominantClass(forecast.probabilities) : -1;
         return {
-          color: "#28333c",
-          weight: 0.75,
-          opacity: 0.85,
-          dashArray: "5 4",
+          stroke: false,
+          fill: true,
           fillColor: dominant >= 0 ? FORECAST_COLORS[dominant] : FORECAST_NEUTRAL,
           fillOpacity: forecast ? opacity : 0,
         };

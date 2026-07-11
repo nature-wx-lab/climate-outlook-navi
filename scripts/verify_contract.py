@@ -835,6 +835,7 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     index = (site_root / "index.html").read_text(encoding="utf-8")
     app_script = (site_root / "app.js").read_text(encoding="utf-8")
     map_script = (site_root / "map.js").read_text(encoding="utf-8")
+    styles = (site_root / "styles.css").read_text(encoding="utf-8")
     require("./vendor/leaflet-1.9.4/leaflet.js" in index, "Leaflet must be locally vendored")
     require("unpkg.com" not in index, "external Leaflet CDN dependency remains")
     require("<h2>気候のものさし</h2>" not in index, "duplicate climate control heading remains")
@@ -844,12 +845,18 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         'if (raw === null || raw.trim() === "") return null;' in app_script,
         "missing numeric URL parameters must remain unset",
     )
+    require("stroke: false" in map_script, "season forecast region strokes must be hidden")
+    require("dashArray" not in map_script, "season forecast dashed region boundaries remain")
+    require("weight: 1.15" in map_script, "prefecture boundary weight must match the map default")
+    require("border: 1px dashed" not in styles, "season legend still implies dashed region boundaries")
     return {
         "text_files_scanned": scanned,
         "blocked_hits": len(hits),
         "local_leaflet": True,
         "start_zoom": 5,
         "duplicate_control_heading": False,
+        "prefecture_boundary_only": True,
+        "season_region_stroke": False,
     }
 
 
