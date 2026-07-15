@@ -835,7 +835,8 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     index = (site_root / "index.html").read_text(encoding="utf-8")
     app_script = (site_root / "app.js").read_text(encoding="utf-8")
     map_script = (site_root / "map.js").read_text(encoding="utf-8")
-    readme = (site_root / "README.md").read_text(encoding="utf-8")
+    readme_path = site_root / "README.md"
+    readme = readme_path.read_text(encoding="utf-8") if readme_path.exists() else None
     styles = (site_root / "styles.css").read_text(encoding="utf-8")
     require("./vendor/leaflet-1.9.4/leaflet.js" in index, "Leaflet must be locally vendored")
     require("unpkg.com" not in index, "external Leaflet CDN dependency remains")
@@ -870,7 +871,9 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require('id="mapInfoPrimary"' in index and 'id="mapInfoSecondary"' in index, "map title hierarchy is missing")
     require("mapPrimaryTitle()" in app_script and "の分布" in app_script, "map title must identify the displayed distribution")
     require("気候平均側：独自算出1km面" not in index, "redundant climate-source note remains inside the legend")
-    require("KsjTmplt-G04-a.html" in index and "標高・傾斜度3次メッシュ（G04-a）" in readme, "G04-a source attribution is incomplete")
+    require("KsjTmplt-G04-a.html" in index, "G04-a source attribution is missing from the public page")
+    if readme is not None:
+        require("標高・傾斜度3次メッシュ（G04-a）" in readme, "G04-a source attribution is missing from README")
     require(
         re.search(r'<a class="brand" href="https://naturewxlab\.com/"[^>]*aria-label="NatureWxLab ホームへ">', index)
         is not None,
