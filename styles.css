@@ -200,7 +200,7 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
   pointer-events: none;
 }
 .climate-legend { top: 52px; width: 118px; padding: 9px 9px 10px; }
-.season-legend { bottom: 10px; width: 242px; }
+.season-legend { bottom: 22px; width: 242px; }
 .legend-heading { display: block; line-height: 1.2; }
 .legend-heading strong { display: inline; font-size: 11px; overflow-wrap: anywhere; white-space: normal; }
 .legend-heading span { display: inline; margin-left: 4px; color: #51666e; font-size: 8px; font-weight: 800; }
@@ -420,7 +420,7 @@ footer a { color: inherit; text-decoration-thickness: 1px; text-underline-offset
   .legend-bar { width: 28px; }
   .legend-tick::before { width: 37px; }
   .legend-tick b { left: 41px; max-width: 47px; font-size: 9px; }
-  .season-legend { right: 6px; bottom: 8px; width: 170px; }
+  .season-legend { right: 6px; bottom: 20px; width: 170px; }
   footer { font-size: 8px; }
 }
 
