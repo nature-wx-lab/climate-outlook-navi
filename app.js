@@ -1,5 +1,5 @@
 import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260710-elements1";
-import { ClimateMap } from "./map.js?v=20260711-pointdetail1";
+import { ClimateMap } from "./map.js?v=20260715-mapreadability1";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
 const ELEMENT_FALLBACKS = {
@@ -67,10 +67,11 @@ const state = {
 };
 
 const elements = Object.fromEntries([
-  "loading", "loadingText", "mapInfo", "elementSelect", "monthSelect", "climateOpacity",
+  "loading", "loadingText", "mapInfo", "mapInfoPrimary", "mapInfoSecondary", "elementSelect", "monthSelect", "climateOpacity",
   "climateControlNote", "forecastToggle", "forecastProduct", "forecastTerm", "forecastOpacity",
   "forecastProductField", "forecastTermField", "forecastOpacityField", "forecastControlNote",
-  "climateLegend", "climateLegendTitle", "legendLow", "legendMiddle", "legendHigh",
+  "climateLegendPanel", "climateLegend", "climateLegendTitle", "climateLegendUnit", "climateLegendTicks",
+  "legendLow", "legendMiddle", "legendHigh",
   "seasonLegend", "seasonKeys", "seasonClassBelow", "seasonClassNormal", "seasonClassAbove",
   "seasonStatus", "sourceStatus", "pointState", "pointUnpin", "meshCode", "meshValue", "meshPeriod", "meshCoords",
   "windowOldValue", "windowNewValue", "differenceValue", "forecastRegion", "forecastPeriod",
@@ -538,14 +539,107 @@ function activeRasterLegend() {
     || (state.mode === "difference" ? rasters.difference_legend : rasters.raw_legend);
 }
 
+function niceLegendStep(range, unit, mode) {
+  if (unit === "℃" && mode === "absolute" && range >= 20) return 5;
+  const target = range / 8;
+  const magnitude = 10 ** Math.floor(Math.log10(target));
+  const fraction = target / magnitude;
+  const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 2.5 ? 2.5 : fraction <= 5 ? 5 : 10;
+  return niceFraction * magnitude;
+}
+
+function legendValuePosition(value, breaks) {
+  const low = breaks[0];
+  const high = breaks.at(-1);
+  if (value <= low) return 100;
+  if (value >= high) return 0;
+  for (let index = 0; index < breaks.length - 1; index += 1) {
+    const start = breaks[index];
+    const end = breaks[index + 1];
+    if (value > end) continue;
+    const interval = end === start ? 0 : (value - start) / (end - start);
+    const palettePosition = (index + interval) / (breaks.length - 1);
+    return (1 - palettePosition) * 100;
+  }
+  return 0;
+}
+
+function formatLegendNumber(value, step, signed) {
+  const maximumFractionDigits = step >= 1 && Number.isInteger(step) ? 0 : step >= 0.1 ? 1 : 2;
+  const formatted = new Intl.NumberFormat("ja-JP", { maximumFractionDigits }).format(value).replace("-", "−");
+  return signed && value > 0 ? `+${formatted}` : formatted;
+}
+
+function conciseEndpointLabel(rawLabel, value, step, signed) {
+  const label = String(rawLabel || "");
+  const prefix = label.includes("以下") ? "≤" : label.includes("超") ? ">" : "";
+  return `${prefix}${formatLegendNumber(value, step, signed)}`;
+}
+
+function climateLegendTicks(config, mode) {
+  const labels = legendLabels(config, mode);
+  const breaks = (config.breaks || []).map(Number).filter(Number.isFinite);
+  if (breaks.length < 2) {
+    return [
+      { label: labels[2], position: 0 },
+      { label: labels[1], position: 50 },
+      { label: labels[0], position: 100 },
+    ];
+  }
+  const low = breaks[0];
+  const high = breaks.at(-1);
+  const step = niceLegendStep(high - low, elementConfig().unit, mode);
+  const candidates = [low, high];
+  const first = Math.ceil((low - step * 1e-9) / step) * step;
+  for (let value = first; value <= high + step * 1e-9; value += step) {
+    candidates.push(Number(value.toFixed(8)));
+  }
+  const unique = [...new Set(candidates)].map((value) => ({
+    value,
+    position: legendValuePosition(value, breaks),
+  })).sort((a, b) => a.position - b.position);
+  const minimumGap = 5.5;
+  const ticks = [unique[0]];
+  unique.slice(1, -1).forEach((entry) => {
+    if (entry.position - ticks.at(-1).position >= minimumGap && 100 - entry.position >= minimumGap) ticks.push(entry);
+  });
+  ticks.push(unique.at(-1));
+  return ticks.map((entry) => ({
+    value: entry.value,
+    position: entry.position,
+    label: entry.value === high
+      ? conciseEndpointLabel(labels[2], entry.value, step, mode === "difference")
+      : entry.value === low
+        ? conciseEndpointLabel(labels[0], entry.value, step, mode === "difference")
+        : formatLegendNumber(entry.value, step, mode === "difference"),
+  }));
+}
+
+function renderClimateLegendTicks(ticks) {
+  const nodes = ticks.map((entry) => {
+    const tick = document.createElement("span");
+    const label = document.createElement("b");
+    tick.className = "legend-tick";
+    tick.style.setProperty("--position", `${entry.position.toFixed(3)}%`);
+    label.textContent = entry.label;
+    tick.append(label);
+    return tick;
+  });
+  elements.climateLegendTicks.replaceChildren(...nodes);
+}
+
 function updateClimateLegend() {
   const config = activeRasterLegend();
   if (!config?.colors?.length) throw new Error(`凡例がありません: ${state.element}/${state.month}/${state.mode}`);
   const stops = config.colors.map((color, index) => `${color} ${(index / (config.colors.length - 1)) * 100}%`).join(",");
   const labels = legendLabels(config, state.mode);
-  elements.climateLegend.style.background = `linear-gradient(90deg,${stops})`;
-  elements.climateLegendTitle.textContent = config.title
-    || (state.mode === "difference" ? "30年平均値の更新差" : elementConfig().name);
+  const title = config.title || (state.mode === "difference" ? "30年平均値の更新差" : elementConfig().name);
+  const ticks = climateLegendTicks(config, state.mode);
+  elements.climateLegend.style.background = `linear-gradient(to top,${stops})`;
+  elements.climateLegendTitle.textContent = title;
+  elements.climateLegendUnit.textContent = elementConfig().unit;
+  elements.climateLegendPanel.setAttribute("aria-label", `${title}（${elementConfig().unit}）の凡例。${ticks.map((tick) => tick.label).join("、")}`);
+  renderClimateLegendTicks(ticks);
   [elements.legendLow.textContent, elements.legendMiddle.textContent, elements.legendHigh.textContent] = labels;
 }
 
@@ -555,6 +649,14 @@ function climateSubtitle() {
   return state.mode === "difference"
     ? `${config.name}｜${monthLabel()}｜30年平均値の更新差（1996–2025 − 1991–2020）`
     : `${config.name}｜${monthLabel()}｜${windowLabel}`;
+}
+
+function mapPrimaryTitle() {
+  const config = elementConfig();
+  const windowLabel = store.climateManifest.windows.find((entry) => entry.id === state.window)?.label || state.window;
+  return state.mode === "difference"
+    ? `${config.name}の更新差｜${monthLabel()}｜1996–2025 − 1991–2020`
+    : `${config.name}の分布｜${monthLabel()}｜${windowLabel}`;
 }
 
 function updateClimateControlNote() {
@@ -646,11 +748,12 @@ function updateStatus() {
     : "";
   elements.sourceStatus.textContent = `${climate}${season}`;
   const overlay = context.canOverlay
-    ? `｜${periodLabel(context.term)}`
+    ? `季節予報：${periodLabel(context.term)}`
     : context.reason
-      ? "｜季節予報なし・未発表"
-      : "｜季節予報OFF";
-  elements.mapInfo.textContent = `${climateSubtitle()}${overlay}`;
+      ? "季節予報：表示なし・未発表"
+      : "季節予報：OFF";
+  elements.mapInfoPrimary.textContent = mapPrimaryTitle();
+  elements.mapInfoSecondary.textContent = overlay;
 }
 
 let selectionSequence = 0;
@@ -1054,20 +1157,23 @@ function bindControls() {
     try {
       const context = forecastContext(false);
       const config = activeRasterLegend();
+      const ticks = climateLegendTicks(config, state.mode);
       const detail = state.selectedMesh
         ? `${state.selectedMesh.meshCode}｜${formatClimateValue(selectedValue(), state.mode === "difference")}`
         : "地点未選択";
       const forecastDetail = state.selectedForecast && context.canOverlay
         ? `${state.regionName || state.regionCode}｜${state.selectedForecast.forecast_region_name}｜${forecastLeadLabel(state.selectedForecast.probabilities, context.labels)}｜${context.labels[0]}${state.selectedForecast.probabilities[0]}%・${context.labels[1]}${state.selectedForecast.probabilities[1]}%・${context.labels[2]}${state.selectedForecast.probabilities[2]}%`
         : context.reason || "季節予報地域: 地点未選択";
-      const forecastPeriod = context.term ? `｜${periodLabel(context.term)}` : "";
+      const forecastPeriod = context.term ? `｜季節予報：${periodLabel(context.term)}` : "";
       const blob = await map.capture({
-        subtitle: `${climateSubtitle()}${forecastPeriod}`,
+        subtitle: `${mapPrimaryTitle()}${forecastPeriod}`,
         detail,
         forecastDetail,
         legend: {
           title: elements.climateLegendTitle.textContent,
+          unit: elementConfig().unit,
           colors: config.colors,
+          ticks,
           low: elements.legendLow.textContent,
           middle: elements.legendMiddle.textContent,
           high: elements.legendHigh.textContent,

@@ -835,6 +835,7 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     index = (site_root / "index.html").read_text(encoding="utf-8")
     app_script = (site_root / "app.js").read_text(encoding="utf-8")
     map_script = (site_root / "map.js").read_text(encoding="utf-8")
+    readme = (site_root / "README.md").read_text(encoding="utf-8")
     styles = (site_root / "styles.css").read_text(encoding="utf-8")
     require("./vendor/leaflet-1.9.4/leaflet.js" in index, "Leaflet must be locally vendored")
     require("unpkg.com" not in index, "external Leaflet CDN dependency remains")
@@ -848,8 +849,33 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require("stroke: false" in map_script, "season forecast region strokes must be hidden")
     require("filter: (feature) => Boolean(resolved[feature.properties.code])" in map_script, "empty season features must not intercept point selection")
     require("dashArray" not in map_script, "season forecast dashed region boundaries remain")
-    require("weight: 1.15" in map_script, "prefecture boundary weight must match the map default")
+    require("weight: 0.6" in map_script, "prefecture boundary weight must match the thin reference appearance")
     require("border: 1px dashed" not in styles, "season legend still implies dashed region boundaries")
+    for selector in (".season-keys i.below", ".season-keys i.normal", ".season-keys i.above", ".season-keys i.tie"):
+        require(selector in styles, f"season legend color selector is missing: {selector}")
+    require("seasonTooltipContent(feature.properties.name, forecast, classLabels)" in map_script, "season tooltip must use safe DOM content")
+    require("document.createTextNode" in map_script, "season tooltip dynamic text must not be concatenated as HTML")
+    require("this.baseId !== \"blank\"" in map_script, "PNG basemap attribution must be conditional")
+    require("地図：地理院タイル（国土地理院）" in map_script, "PNG basemap attribution is missing")
+    require("国土数値情報 G04-a（国土交通省）" in map_script, "PNG elevation-source attribution is missing")
+    require(
+        "wrapCanvasText(context, payload.subtitle, titleWidth - 24)" in map_script
+        and "subtitleLines.forEach" in map_script,
+        "PNG title detail must wrap without truncation on narrow exports",
+    )
+    require('id="climateLegendTicks"' in index, "vertical climate legend tick container is missing")
+    require("linear-gradient(to top" in app_script, "climate legend gradient must be vertical")
+    require("niceLegendStep" in app_script and "legendValuePosition" in app_script, "climate legend tick generation is missing")
+    require("context.createLinearGradient" in map_script and "legend.ticks.forEach" in map_script, "PNG climate legend must be vertical")
+    require('id="mapInfoPrimary"' in index and 'id="mapInfoSecondary"' in index, "map title hierarchy is missing")
+    require("mapPrimaryTitle()" in app_script and "の分布" in app_script, "map title must identify the displayed distribution")
+    require("気候平均側：独自算出1km面" not in index, "redundant climate-source note remains inside the legend")
+    require("KsjTmplt-G04-a.html" in index and "標高・傾斜度3次メッシュ（G04-a）" in readme, "G04-a source attribution is incomplete")
+    require(
+        re.search(r'<a class="brand" href="https://naturewxlab\.com/"[^>]*aria-label="NatureWxLab ホームへ">', index)
+        is not None,
+        "NatureWxLab homepage link is missing from the header",
+    )
     require('id="pointState"' in index, "point preview/fixed state indicator is missing")
     require('id="pointUnpin"' in index, "point unpin control is missing")
     require('id="pointMonthlyChart"' in index, "fixed-point monthly chart is missing")
@@ -868,7 +894,14 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "start_zoom": 5,
         "duplicate_control_heading": False,
         "prefecture_boundary_only": True,
+        "thin_prefecture_boundary": True,
         "season_region_stroke": False,
+        "season_legend_colors": True,
+        "safe_season_tooltip": True,
+        "export_attribution": True,
+        "homepage_link": True,
+        "vertical_climate_legend": True,
+        "strong_map_title": True,
         "live_cursor_preview": True,
         "click_to_pin": True,
         "pinned_monthly_chart": True,

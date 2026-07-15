@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f7883'/%3E%3Cpath d='M17 44V20h7l16 15V20h7v24h-7L24 29v15z' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="./styles.css?v=20260711-pointdetail1">
+  <link rel="stylesheet" href="./styles.css?v=20260715-mapreadability1">
 </head>
 <body>
   <header class="topbar">
@@ -29,7 +29,13 @@
       <button id="settingsToggle" class="header-button settings-toggle" type="button">設定</button>
       <button id="saveImage" class="header-button" type="button">画像保存</button>
       <button id="copyLink" class="header-button" type="button">リンクコピー</button>
-      <span class="brand">Nature Wx Lab</span>
+      <a class="brand" href="https://naturewxlab.com/" aria-label="NatureWxLab ホームへ">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/>
+          <path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        </svg>
+        <span>NatureWxLab</span>
+      </a>
       <nav class="sns-links" aria-label="Nature Wx Lab SNSリンク">
         <a class="sns-link youtube" href="https://www.youtube.com/@nature_wx_lab" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4" fill="#ff0033"/><path d="M10 8.8v6.4l5.4-3.2z" fill="#fff"/></svg><span>YouTube</span>
@@ -90,14 +96,19 @@
     </aside>
 
     <section class="map-shell" aria-label="気候地図">
-      <div id="mapInfo" class="map-info">データを読み込み中</div>
+      <div id="mapInfo" class="map-info">
+        <strong id="mapInfoPrimary">データを読み込み中</strong>
+        <span id="mapInfoSecondary"></span>
+      </div>
       <div id="map"></div>
 
-      <aside class="climate-legend" aria-label="気候平均の凡例">
-        <strong id="climateLegendTitle">平均気温</strong>
-        <div id="climateLegend" class="legend-bar"></div>
-        <div class="legend-labels"><span id="legendLow">−27℃以下</span><span id="legendMiddle">0℃</span><span id="legendHigh">30℃超</span></div>
-        <small>気候平均側：独自算出1km面</small>
+      <aside id="climateLegendPanel" class="climate-legend" aria-label="気候平均の凡例">
+        <div class="legend-heading"><strong id="climateLegendTitle">平均気温</strong><span id="climateLegendUnit">℃</span></div>
+        <div class="legend-scale">
+          <div id="climateLegend" class="legend-bar"></div>
+          <div id="climateLegendTicks" class="legend-ticks" aria-hidden="true"></div>
+        </div>
+        <div class="legend-labels visually-hidden"><span id="legendLow">−27℃以下</span><span id="legendMiddle">0℃</span><span id="legendHigh">30℃超</span></div>
       </aside>
 
       <aside id="seasonLegend" class="season-legend" aria-label="季節予報の凡例">
@@ -173,10 +184,10 @@
   </main>
 
   <footer>
-    気候平均：気象庁観測等をもとにNature Wx Labが独自算出・独自内挿した1km面（1991–2020 / 1996–2025）。季節予報：気象庁の地域別3階級確率。数値の定義・空間単位・不確実性を確認して利用してください。
+    気候平均：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。季節予報：気象庁の地域別3階級確率。定義・空間単位・不確実性を確認してください。
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260711-pointdetail1"></script>
+  <script type="module" src="./app.js?v=20260715-mapreadability1"></script>
 </body>
 </html>

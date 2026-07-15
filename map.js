@@ -31,6 +31,25 @@ function leadClassLabel(probabilities, classLabels = DEFAULT_FORECAST_CLASS_LABE
   return winners.length === 1 ? `最多：${winners[0]}` : `同率首位：${winners.join("・")}`;
 }
 
+function seasonTooltipContent(featureName, forecast, classLabels) {
+  const probabilities = forecast.probabilities;
+  const tooltip = document.createElement("span");
+  const heading = document.createElement("b");
+  heading.textContent = featureName;
+  tooltip.append(
+    heading,
+    document.createElement("br"),
+    document.createTextNode(forecast.forecast_region_name),
+    document.createElement("br"),
+    document.createTextNode(leadClassLabel(probabilities, classLabels)),
+    document.createElement("br"),
+    document.createTextNode(
+      `${classLabels[0]} ${probabilities[0]}%｜${classLabels[1]} ${probabilities[1]}%｜${classLabels[2]} ${probabilities[2]}%`,
+    ),
+  );
+  return tooltip;
+}
+
 function imageToBlob(canvas) {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("PNGを生成できませんでした"))), "image/png");
@@ -46,6 +65,46 @@ function roundRect(context, x, y, width, height, radius) {
   context.arcTo(x, y + height, x, y, r);
   context.arcTo(x, y, x + width, y, r);
   context.closePath();
+}
+
+function fitCanvasText(context, value, maxWidth) {
+  const text = String(value ?? "");
+  if (context.measureText(text).width <= maxWidth) return text;
+  const characters = Array.from(text);
+  while (characters.length && context.measureText(`${characters.join("")}…`).width > maxWidth) {
+    characters.pop();
+  }
+  return `${characters.join("")}…`;
+}
+
+function wrapCanvasText(context, value, maxWidth) {
+  const characters = Array.from(String(value ?? ""));
+  const lines = [];
+  let line = "";
+  characters.forEach((character) => {
+    const candidate = `${line}${character}`;
+    if (line && context.measureText(candidate).width > maxWidth) {
+      const lineCharacters = Array.from(line);
+      const minimumBreakIndex = Math.floor(lineCharacters.length * 0.35);
+      let breakIndex = -1;
+      lineCharacters.forEach((lineCharacter, index) => {
+        if (["｜", " ", "・", "、", "。"].includes(lineCharacter) && index >= minimumBreakIndex) {
+          breakIndex = index + 1;
+        }
+      });
+      if (breakIndex > 0) {
+        lines.push(lineCharacters.slice(0, breakIndex).join("").trimEnd());
+        line = `${lineCharacters.slice(breakIndex).join("").trimStart()}${character}`;
+      } else {
+        lines.push(line);
+        line = character;
+      }
+    } else {
+      line = candidate;
+    }
+  });
+  if (line || !lines.length) lines.push(line);
+  return lines;
 }
 
 export class ClimateMap {
@@ -109,7 +168,7 @@ export class ClimateMap {
       pane: "boundaryPane",
       renderer: this.boundaryRenderer,
       interactive: false,
-      style: { color: "#1e2328", weight: 1.15, opacity: 0.72, fill: false },
+      style: { color: "#1e2328", weight: 0.6, opacity: 0.72, fill: false },
     }).addTo(this.map);
   }
 
@@ -155,9 +214,8 @@ export class ClimateMap {
       onEachFeature: (feature, layer) => {
         const forecast = resolved[feature.properties.code];
         if (!forecast) return;
-        const p = forecast.probabilities;
         layer.bindTooltip(
-          `<b>${feature.properties.name}</b><br>${forecast.forecast_region_name}<br>${leadClassLabel(p, classLabels)}<br>${classLabels[0]} ${p[0]}%｜${classLabels[1]} ${p[1]}%｜${classLabels[2]} ${p[2]}%`,
+          seasonTooltipContent(feature.properties.name, forecast, classLabels),
           { sticky: true, className: "season-tooltip", direction: "top" },
         );
         layer.on("click", (event) => this.handlers.onRegionClick?.({
@@ -227,52 +285,94 @@ export class ClimateMap {
       }
     }
 
-    context.fillStyle = "rgba(255,255,255,.94)";
-    roundRect(context, 14, 14, Math.min(rect.width - 28, 620), 66, 6);
-    context.fill();
-    context.fillStyle = "#18323d";
-    context.font = "700 18px -apple-system, BlinkMacSystemFont, sans-serif";
-    context.fillText("Nature Wx Lab｜気候ものさしナビ", 26, 40);
-    context.font = "12px -apple-system, BlinkMacSystemFont, sans-serif";
-    context.fillText(payload.subtitle.slice(0, 88), 26, 62);
-
-    const legend = payload.legend;
-    const legendWidth = Math.min(430, rect.width - 28);
-    const legendX = rect.width - legendWidth - 14;
-    const legendY = rect.height - 84;
-    context.fillStyle = "rgba(255,255,255,.94)";
-    roundRect(context, legendX, legendY, legendWidth, 70, 6);
-    context.fill();
-    context.fillStyle = "#18323d";
+    const titleWidth = Math.min(rect.width - 28, 620);
+    const titleText = "Nature Wx Lab｜気候ものさしナビ";
+    let titleFontSize = 18;
+    context.font = `700 ${titleFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    while (titleFontSize > 14 && context.measureText(titleText).width > titleWidth - 24) {
+      titleFontSize -= 1;
+      context.font = `700 ${titleFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    }
     context.font = "700 12px -apple-system, BlinkMacSystemFont, sans-serif";
-    context.fillText(legend.title, legendX + 12, legendY + 18);
-    const barX = legendX + 12;
-    const barY = legendY + 28;
-    const barWidth = legendWidth - 24;
-    legend.colors.forEach((color, index) => {
-      context.fillStyle = color;
-      context.fillRect(barX + (barWidth * index) / legend.colors.length, barY, barWidth / legend.colors.length + 1, 14);
-    });
-    context.fillStyle = "#30444d";
-    context.font = "10px -apple-system, BlinkMacSystemFont, sans-serif";
-    context.fillText(legend.low, barX, barY + 29);
-    context.textAlign = "center";
-    context.fillText(legend.middle, barX + barWidth / 2, barY + 29);
-    context.textAlign = "right";
-    context.fillText(legend.high, barX + barWidth, barY + 29);
-    context.textAlign = "left";
+    const subtitleLines = wrapCanvasText(context, payload.subtitle, titleWidth - 24);
+    const titleHeight = 66 + Math.max(0, subtitleLines.length - 1) * 14;
+    context.fillStyle = "rgba(255,255,255,.94)";
+    roundRect(context, 14, 14, titleWidth, titleHeight, 6);
+    context.fill();
+    context.fillStyle = "#18323d";
+    context.font = `700 ${titleFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    context.fillText(titleText, 26, 40);
+    context.font = "700 12px -apple-system, BlinkMacSystemFont, sans-serif";
+    subtitleLines.forEach((line, index) => context.fillText(line, 26, 62 + index * 14));
 
+    const detailLines = [
+      payload.detail,
+      payload.forecastDetail || "季節予報地域: 地点未選択",
+      "気候平均：気象庁観測から独自算出・独自内挿",
+      "標高：国土数値情報 G04-a（国土交通省）",
+      "季節予報：気象庁・地域確率｜灰色＝同率首位",
+    ];
+    if (this.baseId !== "blank") detailLines.push("地図：地理院タイル（国土地理院）");
     const detailWidth = Math.min(520, rect.width - 28);
-    const detailHeight = 62;
-    const detailY = legendY - detailHeight - 12;
+    const detailHeight = 16 + detailLines.length * 14;
+    const detailY = rect.height - detailHeight - 14;
     context.fillStyle = "rgba(255,255,255,.94)";
     roundRect(context, 14, detailY, detailWidth, detailHeight, 6);
     context.fill();
     context.fillStyle = "#30444d";
     context.font = "10px -apple-system, BlinkMacSystemFont, sans-serif";
-    context.fillText(payload.detail.slice(0, 78), 24, detailY + 18);
-    context.fillText((payload.forecastDetail || "季節予報地域: 地点未選択").slice(0, 78), 24, detailY + 35);
-    context.fillText("灰色＝同率首位｜気候平均：独自算出1km面｜季節予報：気象庁・地域確率", 24, detailY + 52);
+    detailLines.forEach((line, index) => {
+      context.fillText(fitCanvasText(context, line, detailWidth - 20), 24, detailY + 18 + index * 14);
+    });
+
+    const legend = payload.legend;
+    const legendWidth = 118;
+    const legendX = rect.width - legendWidth - 14;
+    const legendY = rect.width >= 780 ? 14 : 14 + titleHeight + 12;
+    let legendHeadingFontSize = 10;
+    context.font = `700 ${legendHeadingFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    const fullLegendHeading = `${legend.title}（${legend.unit}）`;
+    let legendHeadingLines = [fullLegendHeading];
+    if (context.measureText(fullLegendHeading).width > legendWidth - 20) {
+      while (legendHeadingFontSize > 8 && context.measureText(legend.title).width > legendWidth - 20) {
+        legendHeadingFontSize -= 1;
+        context.font = `700 ${legendHeadingFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+      }
+      legendHeadingLines = [
+        ...wrapCanvasText(context, legend.title, legendWidth - 20),
+        `（${legend.unit}）`,
+      ];
+    }
+    const legendHeaderHeight = 14 + legendHeadingLines.length * 12;
+    const barHeight = Math.min(260, Math.max(150, detailY - legendY - legendHeaderHeight - 14));
+    const legendHeight = legendHeaderHeight + barHeight + 14;
+    context.fillStyle = "rgba(255,255,255,.94)";
+    roundRect(context, legendX, legendY, legendWidth, legendHeight, 6);
+    context.fill();
+    context.fillStyle = "#18323d";
+    context.font = `700 ${legendHeadingFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    legendHeadingLines.forEach((line, index) => context.fillText(line, legendX + 10, legendY + 16 + index * 12));
+    const barX = legendX + 11;
+    const barY = legendY + legendHeaderHeight;
+    const barWidth = 32;
+    const gradient = context.createLinearGradient(0, barY + barHeight, 0, barY);
+    legend.colors.forEach((color, index) => gradient.addColorStop(index / (legend.colors.length - 1), color));
+    context.fillStyle = gradient;
+    context.fillRect(barX, barY, barWidth, barHeight);
+    context.strokeStyle = "#52646d";
+    context.lineWidth = 1;
+    context.strokeRect(barX, barY, barWidth, barHeight);
+    context.fillStyle = "#30444d";
+    context.font = "700 10px -apple-system, BlinkMacSystemFont, sans-serif";
+    legend.ticks.forEach((tick) => {
+      const y = barY + (tick.position / 100) * barHeight;
+      context.strokeStyle = "rgba(43,57,65,.64)";
+      context.beginPath();
+      context.moveTo(barX, y);
+      context.lineTo(barX + barWidth + 8, y);
+      context.stroke();
+      context.fillText(tick.label, barX + barWidth + 12, y + 3);
+    });
     return imageToBlob(canvas);
   }
 }
