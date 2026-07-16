@@ -1,18 +1,18 @@
 {
   "schema_version": 2,
   "generator_version": "2.0.0",
-  "dataset_id": "2aeca8e4b600eeb2",
-  "generated_at": "2026-07-10T17:22:48+09:00",
-  "fetched_at": "2026-07-10T17:22:48+09:00",
+  "dataset_id": "57c8b7d880ac499a",
+  "generated_at": "2026-07-16T08:28:06+00:00",
+  "fetched_at": "2026-07-16T08:28:03+00:00",
   "status": "available",
   "files": {
     "latest": {
-      "path": "datasets/2aeca8e4b600eeb2/latest.json",
-      "bytes": 593012,
-      "sha256": "52ab836501d7599084d6009637b2ba14a22d7c637b46644d85c414951923a789"
+      "path": "datasets/57c8b7d880ac499a/latest.json",
+      "bytes": 596280,
+      "sha256": "6039ca7a052b330edabacf8b8578e36a80e9e173c061367b1a6334c8f98456dd"
     },
     "regions": {
-      "path": "datasets/2aeca8e4b600eeb2/regions.geojson",
+      "path": "datasets/57c8b7d880ac499a/regions.geojson",
       "bytes": 417255,
       "sha256": "b3bff6c73e85b8c5161d7f9f9a5f0afa9fc6c3ad37c304370fd3b193f46ec35a",
       "feature_count": 385,
@@ -22,8 +22,8 @@
   "products": {
     "P1M": {
       "status": "available",
-      "report_datetime": "2026-07-09T14:30:00+09:00",
-      "target_datetime": "2026-07-11T00:00:00+09:00",
+      "report_datetime": "2026-07-16T14:30:00+09:00",
+      "target_datetime": "2026-07-18T00:00:00+09:00",
       "elements": {
         "temperature": {
           "status": "available",
@@ -55,9 +55,9 @@
         }
       },
       "source_url": "https://www.jma.go.jp/bosai/season/data/P1M.json",
-      "source_sha256": "6f090b8b541b73be04ee2c8062ff6548a71f27dee1de52055761a205b14081b7",
-      "etag": "\"15f51cbcfdc23cbb57396053516c1460\"",
-      "last_modified": "Thu, 09 Jul 2026 05:23:31 GMT"
+      "source_sha256": "e6e13bde8a3fa773e65da7bcaaa97c8688cd01638d25e1a84b3ceb0c7e41fe48",
+      "etag": "\"9558fb5f8aa84b1e635a3b1caab64f7b\"",
+      "last_modified": "Thu, 16 Jul 2026 05:10:33 GMT"
     },
     "P3M": {
       "status": "available",
