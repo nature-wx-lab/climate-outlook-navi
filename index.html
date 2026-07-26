@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f7883'/%3E%3Cpath d='M17 44V20h7l16 15V20h7v24h-7L24 29v15z' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="./styles.css?v=20260726-recent-temperature4">
+  <link rel="stylesheet" href="./styles.css?v=20260727-map-layers1">
 </head>
 <body>
   <header class="topbar">
@@ -111,6 +111,42 @@
           <button data-base="blank" type="button">白地図</button>
           <button class="active" data-base="pale" type="button">淡色</button>
           <button data-base="standard" type="button">標準</button>
+        </div>
+        <div class="map-layer-settings">
+          <label class="check-row layer-toggle">
+            <input id="placeLabelsToggle" type="checkbox" checked>
+            <span>地点名を表示</span>
+          </label>
+          <label class="opacity-control subordinate-control">
+            <span>地点名の濃さ</span>
+            <input id="placeLabelOpacity" type="range" min="0" max="100" step="5" value="80">
+            <output id="placeLabelOpacityValue">80%</output>
+          </label>
+          <label class="check-row layer-toggle">
+            <input id="detailMapToggle" type="checkbox">
+            <span>詳細地図（市町村境界）</span>
+          </label>
+          <label class="opacity-control subordinate-control">
+            <span>詳細地図の濃さ</span>
+            <input id="detailMapOpacity" type="range" min="0" max="100" step="5" value="70" disabled>
+            <output id="detailMapOpacityValue">70%</output>
+          </label>
+          <label class="check-row layer-toggle">
+            <input id="terrainToggle" type="checkbox">
+            <span>地形図</span>
+          </label>
+          <label class="terrain-style-control subordinate-control">
+            <span>地形表示</span>
+            <select id="terrainStyle" disabled>
+              <option value="color">カラー</option>
+              <option value="mono">白黒</option>
+            </select>
+          </label>
+          <label class="opacity-control subordinate-control">
+            <span>地形の濃さ</span>
+            <input id="terrainOpacity" type="range" min="0" max="100" step="5" value="35" disabled>
+            <output id="terrainOpacityValue">35%</output>
+          </label>
         </div>
         <div class="action-grid">
           <button id="locate" type="button">現在地</button>
@@ -236,10 +272,10 @@
   </main>
 
   <footer>
-    気候平均：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。最近の気温平年差：<a href="https://www.data.jma.go.jp/stats/mdrr/normal/index.html" target="_blank" rel="noopener noreferrer">気象庁2020年平年値</a>と日平均気温から独自集計した気象台等・アメダスの観測地点値。地点間は補間していません。
+    気候平均：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。最近の気温平年差：<a href="https://www.data.jma.go.jp/stats/mdrr/normal/index.html" target="_blank" rel="noopener noreferrer">気象庁2020年平年値</a>と日平均気温から独自集計した気象台等・アメダスの観測地点値。地点間は補間していません。地図・詳細地図・地形：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院「地理院タイル」</a>。色別標高図の海域部は海上保安庁海洋情報部の資料を使用して作成。
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260726-recent-temperature2"></script>
+  <script type="module" src="./app.js?v=20260727-map-layers1"></script>
 </body>
 </html>

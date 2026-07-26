@@ -3,16 +3,44 @@ const START_VIEW = Object.freeze({
   zoom: 5,
 });
 const BASES = {
-  blank: null,
+  blank: {
+    url: "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
+    className: "white-context-map",
+    minNativeZoom: 2,
+    maxNativeZoom: 18,
+    attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
+  },
   pale: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
+    minNativeZoom: 2,
+    maxNativeZoom: 18,
     attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
   },
   standard: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+    minNativeZoom: 2,
+    maxNativeZoom: 18,
     attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>',
   },
 };
+const DETAIL_MAP = Object.freeze({
+  url: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+  minNativeZoom: 2,
+  maxNativeZoom: 18,
+});
+const TERRAIN_MAPS = Object.freeze({
+  color: {
+    url: "https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png",
+    minNativeZoom: 5,
+    maxNativeZoom: 15,
+  },
+  mono: {
+    url: "https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png",
+    minNativeZoom: 2,
+    maxNativeZoom: 16,
+  },
+});
+const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>';
 const FORECAST_COLORS = ["#315eb3", "#b59a31", "#d04a3e"];
 const FORECAST_NEUTRAL = "#646f78";
 const DEFAULT_FORECAST_CLASS_LABELS = ["低い", "平年並", "高い"];
@@ -26,19 +54,207 @@ export const TEMPERATURE_ANOMALY_LEGEND = Object.freeze({
   ],
 });
 
+const MAJOR_PLACE_NAMES = new Set([
+  "稚内", "旭川", "札幌", "釧路", "青森", "盛岡", "秋田", "仙台", "山形", "福島",
+  "新潟", "富山", "金沢", "福井", "宇都宮", "前橋", "水戸", "熊谷", "東京", "千葉",
+  "横浜", "甲府", "長野", "岐阜", "静岡", "名古屋", "津", "彦根", "京都", "大阪",
+  "神戸", "奈良", "和歌山", "鳥取", "松江", "岡山", "広島", "山口", "徳島", "高松",
+  "松山", "高知", "福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島", "那覇",
+  "名瀬", "石垣島", "父島",
+]);
+const REGIONAL_PLACE_LABELS = Object.freeze([
+  { name: "中国", lon: 116.4, lat: 39.9, rank: 0, minZoom: 4, regional: true },
+  { name: "韓国", lon: 127.8, lat: 36.5, rank: 0, minZoom: 4, regional: true },
+  { name: "北朝鮮", lon: 127.1, lat: 40.2, rank: 0, minZoom: 4, regional: true },
+  { name: "ロシア", lon: 142.1, lat: 46.2, rank: 0, minZoom: 4, regional: true },
+  { name: "台湾", lon: 121.0, lat: 23.8, rank: 0, minZoom: 4, regional: true },
+]);
+
 const CanvasSquareMarker = L.CircleMarker.extend({
   _updatePath() {
     if (!this._renderer?._drawing || this._empty()) return;
-    const radius = Math.max(Math.round(this._radius), 1);
+    const radius = Math.max(this._radius, 1);
     const context = this._renderer._ctx;
+    const left = this._point.x - radius;
+    const top = this._point.y - radius;
+    const size = radius * 2;
+    const selected = this.options.selected === true;
+    context.save();
+    context.globalAlpha = this.options.opacity ?? 1;
+    context.fillStyle = selected ? "rgba(7, 42, 54, 0.42)" : "rgba(13, 43, 54, 0.34)";
+    context.fillRect(left + 1.35, top + 1.55, size + 0.45, size + 0.45);
+    if (selected) {
+      context.strokeStyle = "rgba(255, 255, 255, 0.94)";
+      context.lineWidth = 3.2;
+      context.strokeRect(left - 1.6, top - 1.6, size + 3.2, size + 3.2);
+    }
+    context.fillStyle = selected ? "#0b3441" : "rgba(20, 52, 62, 0.84)";
+    context.fillRect(left - 0.8, top - 0.8, size + 1.6, size + 1.6);
+    context.globalAlpha = this.options.fillOpacity ?? 1;
+    context.fillStyle = this.options.fillColor || "#ffffff";
+    context.fillRect(left, top, size, size);
+    context.globalAlpha = this.options.opacity ?? 1;
+    context.strokeStyle = "rgba(255, 255, 255, 0.78)";
+    context.lineWidth = 0.9;
     context.beginPath();
-    context.rect(
-      this._point.x - radius,
-      this._point.y - radius,
-      radius * 2,
-      radius * 2,
+    context.moveTo(left + 0.45, top + size - 0.45);
+    context.lineTo(left + 0.45, top + 0.45);
+    context.lineTo(left + size - 0.45, top + 0.45);
+    context.stroke();
+    context.strokeStyle = "rgba(11, 38, 48, 0.34)";
+    context.beginPath();
+    context.moveTo(left + size - 0.45, top + 0.45);
+    context.lineTo(left + size - 0.45, top + size - 0.45);
+    context.lineTo(left + 0.45, top + size - 0.45);
+    context.stroke();
+    context.restore();
+  },
+
+  setSelected(selected) {
+    this.options.selected = selected === true;
+    this.setRadius(selected ? 6 : 4);
+    this.redraw();
+    return this;
+  },
+});
+
+function labelCandidates(stations) {
+  const stationLabels = (stations || []).flatMap((station) => {
+    if (!Number.isFinite(station.lat) || !Number.isFinite(station.lon) || !station.name) return [];
+    const rank = MAJOR_PLACE_NAMES.has(station.name) ? 0 : station.station_type === "surface" ? 1 : 2;
+    return [{
+      name: station.name,
+      lat: station.lat,
+      lon: station.lon,
+      rank,
+      minZoom: rank === 0 ? 5 : rank === 1 ? 7 : 9,
+      regional: false,
+    }];
+  });
+  return [...REGIONAL_PLACE_LABELS, ...stationLabels]
+    .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name, "ja"));
+}
+
+function rectanglesOverlap(a, b) {
+  return a.x < b.x + b.width
+    && a.x + a.width > b.x
+    && a.y < b.y + b.height
+    && a.y + a.height > b.y;
+}
+
+const CanvasPlaceLabelLayer = L.Layer.extend({
+  initialize(options = {}) {
+    L.setOptions(this, options);
+    this._labels = [];
+    this._visible = true;
+    this._opacity = 0.8;
+    this._frame = null;
+  },
+
+  onAdd(map) {
+    this._map = map;
+    this._canvas = L.DomUtil.create("canvas", "leaflet-place-label-layer leaflet-zoom-animated");
+    this._canvas.setAttribute("aria-hidden", "true");
+    map.getPane(this.options.pane).appendChild(this._canvas);
+    map.on("move zoom resize", this._scheduleRedraw, this);
+    this._redraw();
+  },
+
+  onRemove(map) {
+    map.off("move zoom resize", this._scheduleRedraw, this);
+    if (this._frame !== null) cancelAnimationFrame(this._frame);
+    this._canvas?.remove();
+    this._canvas = null;
+    this._map = null;
+  },
+
+  setLabels(stations) {
+    this._labels = labelCandidates(stations);
+    this._scheduleRedraw();
+    return this;
+  },
+
+  setVisible(visible) {
+    this._visible = visible === true;
+    this._scheduleRedraw();
+    return this;
+  },
+
+  setOpacity(opacity) {
+    this._opacity = Math.min(1, Math.max(0, Number(opacity) || 0));
+    this._scheduleRedraw();
+    return this;
+  },
+
+  _scheduleRedraw() {
+    if (!this._map || this._frame !== null) return;
+    this._frame = requestAnimationFrame(() => {
+      this._frame = null;
+      this._redraw();
+    });
+  },
+
+  _redraw() {
+    if (!this._map || !this._canvas) return;
+    const size = this._map.getSize();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const width = Math.max(1, Math.round(size.x * dpr));
+    const height = Math.max(1, Math.round(size.y * dpr));
+    if (this._canvas.width !== width || this._canvas.height !== height) {
+      this._canvas.width = width;
+      this._canvas.height = height;
+      this._canvas.style.width = `${size.x}px`;
+      this._canvas.style.height = `${size.y}px`;
+    }
+    L.DomUtil.setPosition(this._canvas, this._map.containerPointToLayerPoint([0, 0]));
+    const context = this._canvas.getContext("2d");
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    context.clearRect(0, 0, size.x, size.y);
+    if (!this._visible || this._opacity <= 0) return;
+
+    const zoom = this._map.getZoom();
+    const fontSize = zoom <= 5 ? 11 : zoom <= 7 ? 12 : 13;
+    const densityLimit = Math.max(18, Math.floor((size.x * size.y) / 28000));
+    const maxLabels = Math.min(
+      densityLimit,
+      zoom <= 5 ? 48 : zoom <= 6 ? 82 : zoom <= 8 ? 160 : 260,
     );
-    this._renderer._fillStroke(context, this);
+    const occupied = [];
+    let drawn = 0;
+    context.font = `800 ${fontSize}px -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif`;
+    context.textBaseline = "middle";
+    context.textAlign = "left";
+    context.lineJoin = "round";
+    context.lineWidth = Math.max(2.8, fontSize * 0.27);
+
+    for (const label of this._labels) {
+      if (zoom < label.minZoom) continue;
+      const point = this._map.latLngToContainerPoint([label.lat, label.lon]);
+      if (point.x < -90 || point.x > size.x + 90 || point.y < -30 || point.y > size.y + 30) continue;
+      const textWidth = context.measureText(label.name).width;
+      const textX = label.regional ? point.x - textWidth / 2 : point.x + 5;
+      const rect = {
+        x: textX - 3,
+        y: point.y - fontSize * 0.7,
+        width: textWidth + 6,
+        height: fontSize * 1.4,
+      };
+      if (occupied.some((candidate) => rectanglesOverlap(rect, candidate))) continue;
+      occupied.push(rect);
+      context.globalAlpha = this._opacity * (label.rank === 0 ? 1 : label.rank === 1 ? 0.86 : 0.7);
+      context.strokeStyle = "rgba(255, 255, 255, 0.88)";
+      context.fillStyle = "rgba(31, 48, 57, 0.88)";
+      if (!label.regional) {
+        context.beginPath();
+        context.arc(point.x, point.y, label.rank === 0 ? 2.7 : 2.1, 0, Math.PI * 2);
+        context.fill();
+      }
+      context.strokeText(label.name, textX, point.y);
+      context.fillText(label.name, textX, point.y);
+      drawn += 1;
+      if (drawn >= maxLabels) break;
+    }
+    context.globalAlpha = 1;
   },
 });
 
@@ -178,25 +394,33 @@ export class ClimateMap {
       maxBoundsViscosity: 0.7,
     }).setView(START_VIEW.center, START_VIEW.zoom);
     L.control.zoom({ position: "bottomleft" }).addTo(this.map);
+    this.map.createPane("detailMapPane").style.zIndex = 205;
+    this.map.createPane("terrainPane").style.zIndex = 210;
     this.map.createPane("climatePane").style.zIndex = 330;
     this.map.createPane("recentTemperaturePane").style.zIndex = 390;
     this.map.createPane("seasonPane").style.zIndex = 410;
     this.map.createPane("boundaryPane").style.zIndex = 430;
+    this.map.createPane("placeLabelPane").style.zIndex = 440;
     this.map.createPane("selectionPane").style.zIndex = 450;
     this.map.getPane("recentTemperaturePane").style.pointerEvents = "none";
     this.map.getPane("boundaryPane").style.pointerEvents = "none";
+    this.map.getPane("placeLabelPane").style.pointerEvents = "none";
     this.map.getPane("selectionPane").style.pointerEvents = "none";
     this.boundaryRenderer = L.canvas({ pane: "boundaryPane", padding: 0.3 });
     this.seasonRenderer = L.canvas({ pane: "seasonPane", padding: 0.3 });
     this.recentTemperatureRenderer = L.canvas({ pane: "recentTemperaturePane", padding: 0.3 });
     this.baseLayer = null;
     this.baseId = "pale";
+    this.detailMapLayer = null;
+    this.terrainLayer = null;
+    this.terrainStyle = "color";
     this.climateLayer = null;
     this.seasonLayer = null;
     this.recentTemperatureLayer = null;
     this.recentTemperatureMarkers = new Map();
     this.boundaryLayer = null;
     this.selectionLayer = null;
+    this.placeLabelLayer = new CanvasPlaceLabelLayer({ pane: "placeLabelPane" }).addTo(this.map);
     this.setBase("pale");
     this.map.on("click", (event) => this.handlers.onMapClick?.(event.latlng));
     this.map.on("moveend zoomend", () => this.handlers.onViewChange?.(this.viewState()));
@@ -211,17 +435,73 @@ export class ClimateMap {
     this.baseLayer = null;
     this.baseId = id;
     const config = BASES[id];
-    if (config) {
-      this.baseLayer = L.tileLayer(config.url, {
-        minZoom: 4,
-        maxZoom: 12,
-        maxNativeZoom: 18,
-        crossOrigin: true,
-        attribution: config.attribution,
-        updateWhenIdle: true,
-      }).addTo(this.map);
-    }
+    this.baseLayer = L.tileLayer(config.url, {
+      minZoom: 4,
+      maxZoom: 12,
+      minNativeZoom: config.minNativeZoom,
+      maxNativeZoom: config.maxNativeZoom,
+      crossOrigin: true,
+      className: config.className || "",
+      attribution: config.attribution,
+      updateWhenIdle: true,
+    }).addTo(this.map);
     return id;
+  }
+
+  setPlaceLabels(stations) {
+    this.placeLabelLayer.setLabels(stations);
+  }
+
+  setPlaceLabelsVisible(visible) {
+    this.placeLabelLayer.setVisible(visible);
+  }
+
+  setPlaceLabelOpacity(opacity) {
+    this.placeLabelLayer.setOpacity(opacity);
+  }
+
+  setDetailMap(visible, opacity = 0.7) {
+    if (this.detailMapLayer) this.map.removeLayer(this.detailMapLayer);
+    this.detailMapLayer = null;
+    if (!visible) return;
+    this.detailMapLayer = L.tileLayer(DETAIL_MAP.url, {
+      pane: "detailMapPane",
+      minZoom: 4,
+      maxZoom: 12,
+      minNativeZoom: DETAIL_MAP.minNativeZoom,
+      maxNativeZoom: DETAIL_MAP.maxNativeZoom,
+      crossOrigin: true,
+      attribution: GSI_ATTRIBUTION,
+      opacity,
+      updateWhenIdle: true,
+    }).addTo(this.map);
+  }
+
+  setDetailMapOpacity(opacity) {
+    this.detailMapLayer?.setOpacity(opacity);
+  }
+
+  setTerrain(visible, style = "color", opacity = 0.35) {
+    if (this.terrainLayer) this.map.removeLayer(this.terrainLayer);
+    this.terrainLayer = null;
+    this.terrainStyle = style in TERRAIN_MAPS ? style : "color";
+    if (!visible) return;
+    const config = TERRAIN_MAPS[this.terrainStyle];
+    this.terrainLayer = L.tileLayer(config.url, {
+      pane: "terrainPane",
+      minZoom: 4,
+      maxZoom: 12,
+      minNativeZoom: config.minNativeZoom,
+      maxNativeZoom: config.maxNativeZoom,
+      crossOrigin: true,
+      attribution: GSI_ATTRIBUTION,
+      opacity,
+      updateWhenIdle: true,
+    }).addTo(this.map);
+  }
+
+  setTerrainOpacity(opacity) {
+    this.terrainLayer?.setOpacity(opacity);
   }
 
   async setBoundaries(path) {
@@ -271,9 +551,8 @@ export class ClimateMap {
         pane: "recentTemperaturePane",
         renderer: this.recentTemperatureRenderer,
         bubblingMouseEvents: false,
-        radius: 3,
-        color: "#ffffff",
-        weight: 1,
+        radius: 4,
+        selected: false,
         opacity: 0.96,
         fillColor: temperatureAnomalyColor(point.anomaly),
         fillOpacity: 0.96,
@@ -292,11 +571,7 @@ export class ClimateMap {
 
   selectRecentStation(stationId, pan = false) {
     this.recentTemperatureMarkers.forEach((marker, id) => {
-      marker.setRadius(id === stationId ? 5 : 3);
-      marker.setStyle({
-        color: id === stationId ? "#142f39" : "#ffffff",
-        weight: id === stationId ? 2 : 1,
-      });
+      marker.setSelected(id === stationId);
     });
     const marker = this.recentTemperatureMarkers.get(stationId);
     if (marker && pan) this.map.setView(marker.getLatLng(), Math.max(this.map.getZoom(), 7));
@@ -390,8 +665,23 @@ export class ClimateMap {
       if (layerRect.width <= 0 || layerRect.height <= 0) continue;
       try {
         if (element instanceof HTMLImageElement && element.decode) await element.decode().catch(() => {});
+        let paintNode = element;
+        let layerOpacity = 1;
+        const layerFilters = [];
+        while (paintNode && paintNode !== mapNode) {
+          const style = getComputedStyle(paintNode);
+          const opacity = Number(style.opacity);
+          if (Number.isFinite(opacity)) layerOpacity *= opacity;
+          if (style.filter && style.filter !== "none") layerFilters.push(style.filter);
+          paintNode = paintNode.parentElement;
+        }
+        context.save();
+        context.globalAlpha = layerOpacity;
+        context.filter = layerFilters.join(" ") || "none";
         context.drawImage(element, layerRect.left - rect.left, layerRect.top - rect.top, layerRect.width, layerRect.height);
+        context.restore();
       } catch {
+        context.restore();
         // The same-origin climate raster and canvas overlays remain exportable.
       }
     }
@@ -416,14 +706,17 @@ export class ClimateMap {
     context.font = "700 12px -apple-system, BlinkMacSystemFont, sans-serif";
     subtitleLines.forEach((line, index) => context.fillText(line, 26, 62 + index * 14));
 
-    const detailLines = payload.detailLines || [
+    const detailLines = [...(payload.detailLines || [
       payload.detail,
       payload.forecastDetail || "季節予報地域: 地点未選択",
       "気候平均：気象庁観測から独自算出・独自内挿",
       "標高：国土数値情報 G04-a（国土交通省）",
       "季節予報：気象庁・地域確率｜灰色＝同率首位",
-    ];
-    if (this.baseId !== "blank") detailLines.push("地図：地理院タイル（国土地理院）");
+    ])];
+    detailLines.push("地図：地理院タイル（国土地理院）");
+    if (this.terrainLayer && this.terrainStyle === "color") {
+      detailLines.push("色別標高図の海域部：海上保安庁海洋情報部資料");
+    }
     const detailWidth = Math.min(520, rect.width - 28);
     const detailHeight = 16 + detailLines.length * 14;
     const detailY = rect.height - detailHeight - 14;

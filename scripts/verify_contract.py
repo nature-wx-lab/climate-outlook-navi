@@ -1040,9 +1040,54 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         require(selector in styles, f"season legend color selector is missing: {selector}")
     require("seasonTooltipContent(feature.properties.name, forecast, classLabels)" in map_script, "season tooltip must use safe DOM content")
     require("document.createTextNode" in map_script, "season tooltip dynamic text must not be concatenated as HTML")
-    require("this.baseId !== \"blank\"" in map_script, "PNG basemap attribution must be conditional")
     require("地図：地理院タイル（国土地理院）" in map_script, "PNG basemap attribution is missing")
     require("国土数値情報 G04-a（国土交通省）" in map_script, "PNG elevation-source attribution is missing")
+    require(
+        'className: "white-context-map"' in map_script
+        and ".white-context-map" in styles
+        and "filter: saturate(.48) brightness(1.11) contrast(.9)" in styles,
+        "weather-distribution-style white basemap is missing",
+    )
+    for tile_id in ("std", "relief", "hillshademap"):
+        require(
+            f"https://cyberjapandata.gsi.go.jp/xyz/{tile_id}/{{z}}/{{x}}/{{y}}.png" in map_script,
+            f"GSI map layer is missing: {tile_id}",
+        )
+    for control_id in (
+        "placeLabelsToggle", "placeLabelOpacity", "detailMapToggle", "detailMapOpacity",
+        "terrainToggle", "terrainStyle", "terrainOpacity",
+    ):
+        require(f'id="{control_id}"' in index, f"map layer control is missing: {control_id}")
+    for range_id in ("placeLabelOpacity", "detailMapOpacity", "terrainOpacity"):
+        require(
+            re.search(rf'id="{range_id}"[^>]*\bmin="0"[^>]*\bmax="100"', index) is not None,
+            f"map layer opacity must support 0-100: {range_id}",
+        )
+    require("CanvasPlaceLabelLayer" in map_script and "MAJOR_PLACE_NAMES" in map_script, "adaptive place labels are missing")
+    require(
+        all(
+            token in app_script
+            for token in (
+                'url.searchParams.set("labels"',
+                'url.searchParams.set("labelOpacity"',
+                'url.searchParams.set("detail"',
+                'url.searchParams.set("detailOpacity"',
+                'url.searchParams.set("terrain"',
+                'url.searchParams.set("terrainStyle"',
+                'url.searchParams.set("terrainOpacity"',
+            )
+        ),
+        "map layer share-state contract is incomplete",
+    )
+    require(
+        "色別標高図の海域部は海上保安庁海洋情報部の資料を使用して作成" in index,
+        "color-relief sea-area attribution is missing",
+    )
+    require(
+        'context.globalAlpha = layerOpacity' in map_script
+        and 'context.filter = layerFilters.join(" ") || "none"' in map_script,
+        "PNG export must preserve map-layer opacity and white-map filters",
+    )
     require(
         "wrapCanvasText(context, payload.subtitle, titleWidth - 24)" in map_script
         and "subtitleLines.forEach" in map_script,
@@ -1082,9 +1127,12 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require("setRecentTemperature(points, visible = true)" in map_script, "recent station map layer is missing")
     require(
         "CanvasSquareMarker" in map_script
-        and "radius: 3" in map_script
+        and "radius: 4" in map_script
+        and "setSelected(selected)" in map_script
+        and "rgba(13, 43, 54, 0.34)" in map_script
+        and "rgba(255, 255, 255, 0.78)" in map_script
         and "stationType === \"amedas\"" in map_script,
-        "maximum-density square station marker contract is missing",
+        "maximum-density beveled square station marker contract is missing",
     )
     require("recentTemperatureTooltip(point)" in map_script, "recent station tooltip is missing")
     require("地点間は補間していません" in index, "recent point-map non-interpolation note is missing")
@@ -1101,6 +1149,11 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "season_legend_colors": True,
         "safe_season_tooltip": True,
         "export_attribution": True,
+        "weather_distribution_style_white_basemap": True,
+        "adaptive_place_labels": True,
+        "detail_and_terrain_layers": True,
+        "map_layer_opacity_zero_to_one_hundred": True,
+        "map_layer_share_state": True,
         "homepage_link": True,
         "vertical_climate_legend": True,
         "strong_map_title": True,
@@ -1111,6 +1164,7 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "recent_temperature_five_day_slider": True,
         "recent_temperature_point_only": True,
         "recent_temperature_maximum_density_square_markers": True,
+        "recent_temperature_beveled_markers": True,
     }
 
 

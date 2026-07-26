@@ -1,5 +1,5 @@
 import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260726-recent-temperature2";
-import { ClimateMap, TEMPERATURE_ANOMALY_LEGEND } from "./map.js?v=20260726-recent-temperature2";
+import { ClimateMap, TEMPERATURE_ANOMALY_LEGEND } from "./map.js?v=20260727-map-layers1";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
 const ELEMENT_FALLBACKS = {
@@ -58,6 +58,13 @@ const state = {
   forecastTerm: "0",
   forecastOpacity: 0.28,
   base: "pale",
+  showPlaceLabels: true,
+  placeLabelOpacity: 0.8,
+  showDetailMap: false,
+  detailMapOpacity: 0.7,
+  showTerrain: false,
+  terrainStyle: "color",
+  terrainOpacity: 0.35,
   meshCode: null,
   selectedMesh: null,
   preview: null,
@@ -92,6 +99,9 @@ const elements = Object.fromEntries([
   "selectedForecastSection", "climateReadingGuide", "recentReadingGuide", "recentStationId",
   "recentStationName", "recentAnomalyValue", "recentPeriodLabel", "recentObservedMean",
   "recentNormalMean", "recentValidDays", "recentStationNote",
+  "placeLabelsToggle", "placeLabelOpacity", "placeLabelOpacityValue",
+  "detailMapToggle", "detailMapOpacity", "detailMapOpacityValue",
+  "terrainToggle", "terrainStyle", "terrainOpacity", "terrainOpacityValue",
 ].map((id) => [id, document.getElementById(id)]));
 
 function firstDefined(...values) {
@@ -469,6 +479,22 @@ function parseInitialState() {
   const forecastOpacity = Number(params.get("fop"));
   if (Number.isFinite(forecastOpacity) && forecastOpacity >= 5 && forecastOpacity <= 70) state.forecastOpacity = forecastOpacity / 100;
   if (["blank", "pale", "standard"].includes(params.get("base"))) state.base = params.get("base");
+  if (params.get("labels") === "0") state.showPlaceLabels = false;
+  const placeLabelOpacity = optionalNumberParam(params, "labelOpacity");
+  if (placeLabelOpacity !== null && placeLabelOpacity >= 0 && placeLabelOpacity <= 100) {
+    state.placeLabelOpacity = placeLabelOpacity / 100;
+  }
+  if (params.get("detail") === "1") state.showDetailMap = true;
+  const detailMapOpacity = optionalNumberParam(params, "detailOpacity");
+  if (detailMapOpacity !== null && detailMapOpacity >= 0 && detailMapOpacity <= 100) {
+    state.detailMapOpacity = detailMapOpacity / 100;
+  }
+  if (params.get("terrain") === "1") state.showTerrain = true;
+  if (["color", "mono"].includes(params.get("terrainStyle"))) state.terrainStyle = params.get("terrainStyle");
+  const terrainOpacity = optionalNumberParam(params, "terrainOpacity");
+  if (terrainOpacity !== null && terrainOpacity >= 0 && terrainOpacity <= 100) {
+    state.terrainOpacity = terrainOpacity / 100;
+  }
   if (/^\d{8}$/.test(params.get("mesh") || "")) state.meshCode = params.get("mesh");
   if (/^(hoppo|\d{6})$/.test(params.get("region") || "")) state.regionCode = params.get("region");
   if (/^\d{5}$/.test(params.get("station") || "")) state.recentStationId = params.get("station");
@@ -500,6 +526,23 @@ function parseInitialState() {
 function setFieldDisabled(field, input, disabled) {
   input.disabled = disabled;
   field?.classList.toggle("control-disabled", disabled);
+}
+
+function syncMapLayerControls() {
+  elements.placeLabelsToggle.checked = state.showPlaceLabels;
+  elements.placeLabelOpacity.value = String(Math.round(state.placeLabelOpacity * 100));
+  elements.placeLabelOpacityValue.value = `${Math.round(state.placeLabelOpacity * 100)}%`;
+  elements.placeLabelOpacity.disabled = !state.showPlaceLabels;
+  elements.detailMapToggle.checked = state.showDetailMap;
+  elements.detailMapOpacity.value = String(Math.round(state.detailMapOpacity * 100));
+  elements.detailMapOpacityValue.value = `${Math.round(state.detailMapOpacity * 100)}%`;
+  elements.detailMapOpacity.disabled = !state.showDetailMap;
+  elements.terrainToggle.checked = state.showTerrain;
+  elements.terrainStyle.value = state.terrainStyle;
+  elements.terrainStyle.disabled = !state.showTerrain;
+  elements.terrainOpacity.value = String(Math.round(state.terrainOpacity * 100));
+  elements.terrainOpacityValue.value = `${Math.round(state.terrainOpacity * 100)}%`;
+  elements.terrainOpacity.disabled = !state.showTerrain;
 }
 
 function applyRecentControls() {
@@ -549,6 +592,7 @@ function applyControls() {
   elements.forecastToggle.checked = state.forecastVisible && !elements.forecastToggle.disabled;
   elements.forecastProduct.value = state.forecastProduct;
   elements.forecastOpacity.value = String(Math.round(state.forecastOpacity * 100));
+  syncMapLayerControls();
   document.getElementById("windowControls").classList.toggle("muted-control", state.mode === "difference");
   const recent = state.mapMode === "recent";
   elements.climateControlsSection.hidden = recent;
@@ -1316,6 +1360,13 @@ function buildUrl() {
   url.searchParams.set("cop", Math.round(state.climateOpacity * 100));
   url.searchParams.set("fop", Math.round(state.forecastOpacity * 100));
   url.searchParams.set("base", state.base);
+  url.searchParams.set("labels", state.showPlaceLabels ? "1" : "0");
+  url.searchParams.set("labelOpacity", Math.round(state.placeLabelOpacity * 100));
+  url.searchParams.set("detail", state.showDetailMap ? "1" : "0");
+  url.searchParams.set("detailOpacity", Math.round(state.detailMapOpacity * 100));
+  url.searchParams.set("terrain", state.showTerrain ? "1" : "0");
+  url.searchParams.set("terrainStyle", state.terrainStyle);
+  url.searchParams.set("terrainOpacity", Math.round(state.terrainOpacity * 100));
   if (state.mapMode === "recent") {
     url.searchParams.set("start", state.recentStart);
     url.searchParams.set("end", state.recentEnd);
@@ -1452,6 +1503,48 @@ function bindControls() {
     applyControls();
     syncUrl();
   }));
+  elements.placeLabelsToggle.addEventListener("change", () => {
+    state.showPlaceLabels = elements.placeLabelsToggle.checked;
+    map.setPlaceLabelsVisible(state.showPlaceLabels);
+    syncMapLayerControls();
+    syncUrl();
+  });
+  elements.placeLabelOpacity.addEventListener("input", () => {
+    state.placeLabelOpacity = Number(elements.placeLabelOpacity.value) / 100;
+    map.setPlaceLabelOpacity(state.placeLabelOpacity);
+    syncMapLayerControls();
+    syncUrl();
+  });
+  elements.detailMapToggle.addEventListener("change", () => {
+    state.showDetailMap = elements.detailMapToggle.checked;
+    map.setDetailMap(state.showDetailMap, state.detailMapOpacity);
+    syncMapLayerControls();
+    syncUrl();
+  });
+  elements.detailMapOpacity.addEventListener("input", () => {
+    state.detailMapOpacity = Number(elements.detailMapOpacity.value) / 100;
+    map.setDetailMapOpacity(state.detailMapOpacity);
+    syncMapLayerControls();
+    syncUrl();
+  });
+  elements.terrainToggle.addEventListener("change", () => {
+    state.showTerrain = elements.terrainToggle.checked;
+    map.setTerrain(state.showTerrain, state.terrainStyle, state.terrainOpacity);
+    syncMapLayerControls();
+    syncUrl();
+  });
+  elements.terrainStyle.addEventListener("change", () => {
+    state.terrainStyle = elements.terrainStyle.value;
+    map.setTerrain(state.showTerrain, state.terrainStyle, state.terrainOpacity);
+    syncMapLayerControls();
+    syncUrl();
+  });
+  elements.terrainOpacity.addEventListener("input", () => {
+    state.terrainOpacity = Number(elements.terrainOpacity.value) / 100;
+    map.setTerrainOpacity(state.terrainOpacity);
+    syncMapLayerControls();
+    syncUrl();
+  });
   elements.monthSelect.addEventListener("change", () => {
     state.month = Number(elements.monthSelect.value);
     updateClimate();
@@ -1590,6 +1683,11 @@ async function initialize() {
     document.body.classList.toggle("recent-view", state.mapMode === "recent");
     applyControls();
     map.setBase(state.base);
+    map.setPlaceLabels(store.recentTemperature.stations);
+    map.setPlaceLabelsVisible(state.showPlaceLabels);
+    map.setPlaceLabelOpacity(state.placeLabelOpacity);
+    map.setDetailMap(state.showDetailMap, state.detailMapOpacity);
+    map.setTerrain(state.showTerrain, state.terrainStyle, state.terrainOpacity);
     if (initialView.lat !== null && initialView.lon !== null) {
       map.setView(initialView.lat, initialView.lon, initialView.zoom);
     }
