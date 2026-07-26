@@ -1,4 +1,4 @@
-name: Update seasonal forecast and deploy Pages
+name: Update outlook data and deploy Pages
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh:
-        description: Check JMA seasonal forecast sources before deployment
+        description: Check JMA seasonal forecast and recent temperature sources before deployment
         required: true
         default: true
         type: boolean
@@ -53,7 +53,9 @@ jobs:
 
       - name: Refresh validated seasonal forecast derivative
         if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh)
-        run: python scripts/update_season_forecast.py
+        run: |
+          python scripts/update_season_forecast.py
+          python scripts/update_recent_temperature_anomaly.py
 
       - name: Verify candidate before commit
         env:
@@ -63,7 +65,7 @@ jobs:
           python scripts/privacy_gate.py
           git diff --check
 
-      - name: Commit changed seasonal data locally
+      - name: Commit changed outlook data locally
         id: state
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -71,14 +73,14 @@ jobs:
           MANUAL_DEPLOY: ${{ inputs.deploy }}
         run: |
           changed=false
-          if test -n "$(git status --porcelain --untracked-files=all -- data/season)"; then
-            unexpected="$(git status --porcelain --untracked-files=all | sed -E 's/^.. //' | grep -v '^data/season/' || true)"
-            test -z "$unexpected" || { echo "Updater changed files outside data/season"; exit 1; }
+          if test -n "$(git status --porcelain --untracked-files=all -- data/season data/recent-temperature)"; then
+            unexpected="$(git status --porcelain --untracked-files=all | sed -E 's/^.. //' | grep -Ev '^data/(season|recent-temperature)/' || true)"
+            test -z "$unexpected" || { echo "Updater changed files outside allowlisted data directories"; exit 1; }
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -- data/season
+            git add -- data/season data/recent-temperature
             git diff --cached --check
-            git commit -m "Update seasonal forecast data"
+            git commit -m "Update outlook data"
             changed=true
           fi
           source_sha="$(git rev-parse HEAD)"
@@ -98,7 +100,7 @@ jobs:
           PRIVACY_DENYLIST: ${{ secrets.PRIVACY_DENYLIST }}
         run: python scripts/privacy_gate.py
 
-      - name: Push exact verified seasonal update
+      - name: Push exact verified outlook update
         if: steps.state.outputs.changed == 'true'
         run: git push origin HEAD:main
 

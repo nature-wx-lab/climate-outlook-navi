@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "generator_version": "2.0.1",
-  "dataset_id": "climate-baseline-610-ac9a01103969ae61",
-  "generated_at": "2026-07-10T17:18:26+09:00",
+  "generator_version": "2.0.2",
+  "dataset_id": "climate-baseline-610-e7e2eada08fe30a3",
+  "generated_at": "2026-07-17T13:10:40+09:00",
   "source": {
     "logical_database_id": "naturewxlab-climate-foundation-db",
     "database_version": "v2.9",
@@ -1640,6 +1640,9 @@
       },
       "source_mesh_count": 387717,
       "unique_render_pixels": 369168,
+      "interior_hole_rule": "surrounded-by-8-render-pixels",
+      "isolated_interior_holes_filled": 593,
+      "remaining_isolated_interior_holes": 0,
       "note": "全国表示用の描画縮約。地点値は全1kmメッシュを保持するchunkから取得。"
     },
     "legends": {
@@ -1725,187 +1728,187 @@
       "1991_2020": {
         "1": {
           "path": "rasters/solar_1991_2020_m01.webp",
-          "bytes": 20620,
-          "sha256": "6a3bdb61e7b47def2080303bdcb679dac872863990a209972f1a7ab4ae061920"
+          "bytes": 19328,
+          "sha256": "ab5ab4a4b361ecf27ecb5e75f0f0d20ffec549f90ec2512cc87b0d33848c122a"
         },
         "2": {
           "path": "rasters/solar_1991_2020_m02.webp",
-          "bytes": 20354,
-          "sha256": "2a87d0c0d3d868e4461544c966fe2b341a5d5998587df0670019da084fa2586f"
+          "bytes": 18792,
+          "sha256": "193504a8ea3785ddf745415f8e0d72e38a13ee8cd0f858f945bb9526f2c0da02"
         },
         "3": {
           "path": "rasters/solar_1991_2020_m03.webp",
-          "bytes": 20270,
-          "sha256": "76b5ead2988d1b10b6d8e7651f1122c8e272404ffb29f07329d54c1ee1dc2cb6"
+          "bytes": 19404,
+          "sha256": "85d3ab34dee1b5c90225c01fcf4479b8161530ab40c6c130fcfc83a8bcb1671f"
         },
         "4": {
           "path": "rasters/solar_1991_2020_m04.webp",
-          "bytes": 17646,
-          "sha256": "7ba7ed16159cea14882ebad073e0008d753532d200e947bb0d4f2e99d936f430"
+          "bytes": 16896,
+          "sha256": "8fee8e50262293272cededb5205967fe9b43493ce33131b034f25f90f9d15cc7"
         },
         "5": {
           "path": "rasters/solar_1991_2020_m05.webp",
-          "bytes": 18444,
-          "sha256": "a195679271d40fddb9d54a34daadb95036320a42c0acf711af5b457d2df89da7"
+          "bytes": 17734,
+          "sha256": "d4587c86b043eb2b120d6ccb086c13a0122c1546c7ff64c2eb346e8ed82cde31"
         },
         "6": {
           "path": "rasters/solar_1991_2020_m06.webp",
-          "bytes": 21496,
-          "sha256": "691476d92267e2ca13a932d3aec59fc80456f56f85fe104d23aa54e4bbffd6ea"
+          "bytes": 20614,
+          "sha256": "196cca3687647a0a1ab4f77135e7acbb0be152b61bca6f8be6acaf69b4001f8e"
         },
         "7": {
           "path": "rasters/solar_1991_2020_m07.webp",
-          "bytes": 23252,
-          "sha256": "39fa5708d6f55f36c9e307ba31bdd8ca63d4b978fad84f1fb8079cc0ec78c8e6"
+          "bytes": 21998,
+          "sha256": "c379a500394fb8274467bfea6d4b9fa5b757e4dc8df4f6b7c1b5e0250dc376a8"
         },
         "8": {
           "path": "rasters/solar_1991_2020_m08.webp",
-          "bytes": 22310,
-          "sha256": "b83b01d9a02283bdf38d354444e7efb11cf69c6a2112755f8eb4a92d800ca7bc"
+          "bytes": 21602,
+          "sha256": "1ae4f657f68c7e78ac2b402796bfe5cdb2976c83aba84dfe727b1369ce2ae5fb"
         },
         "9": {
           "path": "rasters/solar_1991_2020_m09.webp",
-          "bytes": 20028,
-          "sha256": "546349e9d6e0437f7d785d13166b847c4f3f160f13084b076c59e5d2d8cdfa69"
+          "bytes": 19460,
+          "sha256": "e342ce44b00514fd38741ad04213e1aa48434a810e07086de8900641f492d89b"
         },
         "10": {
           "path": "rasters/solar_1991_2020_m10.webp",
-          "bytes": 18674,
-          "sha256": "adb42045b9d182039e489df6d3e406fd351db218423739c72f7a8ae595d5049b"
+          "bytes": 18182,
+          "sha256": "bc7c077558770c1e54a164748f4c22b970e426f1357ea9d68bbd484a01371058"
         },
         "11": {
           "path": "rasters/solar_1991_2020_m11.webp",
-          "bytes": 19262,
-          "sha256": "d87011db936c5ae56a5fde9ff66226c451bb74811e2f3c23ab35ed03c1723f1a"
+          "bytes": 17842,
+          "sha256": "30a093ae99a1eb22c49e74d3889e0be79edc0b535782f5cac98595208f89583d"
         },
         "12": {
           "path": "rasters/solar_1991_2020_m12.webp",
-          "bytes": 20418,
-          "sha256": "c94752ae9fdbbbcc07b95566169d4828b0040a687e2f18a8ad59619246c56e84"
+          "bytes": 19206,
+          "sha256": "322d6a6a5ec1b6e7898871d4d215660a9e64d081763ff99a6be2ff3199708ff0"
         }
       },
       "1996_2025": {
         "1": {
           "path": "rasters/solar_1996_2025_m01.webp",
-          "bytes": 20720,
-          "sha256": "2cc7cbc42a99d5c419191cf7134e486d068757e855d6ef525585bad103354352"
+          "bytes": 19380,
+          "sha256": "b2fe5a4d83f14c95a6f27e8d54a8197590066117471c096d201a42e03bb1c096"
         },
         "2": {
           "path": "rasters/solar_1996_2025_m02.webp",
-          "bytes": 20328,
-          "sha256": "6374ec53e19fea9c66493809a2bcfe106d918892805e83d1f67b4d551edbe568"
+          "bytes": 18682,
+          "sha256": "4532842d80f676e1b904fd40c04a966b6a6ac0df12be83007e5c3c2a01f0d596"
         },
         "3": {
           "path": "rasters/solar_1996_2025_m03.webp",
-          "bytes": 19144,
-          "sha256": "7b50130425473c94b95971892ce729290d6c8f8d976eb4146fff42496909a02e"
+          "bytes": 18446,
+          "sha256": "0b132b43d36617a47ca04ce531abdefae6a860e30a403267b99cc31727fdb6d7"
         },
         "4": {
           "path": "rasters/solar_1996_2025_m04.webp",
-          "bytes": 16960,
-          "sha256": "dd82bd3067e4437828093827e028077fcdde9a811d6c067ff69ae17cc42fe566"
+          "bytes": 16164,
+          "sha256": "9b93ca82cbf7eba3223ae30ff43de12a0961b9381c77fe706ff7c35d471fc1d8"
         },
         "5": {
           "path": "rasters/solar_1996_2025_m05.webp",
-          "bytes": 19606,
-          "sha256": "d885b7f684b918d57df564c265f0601737f75731cc69cc3e8cc9b28c1e0a2d7b"
+          "bytes": 18092,
+          "sha256": "6915f5c67032193eb4dbd0263d535f5e51ad3cef69a1e86bf1e5a034db1486fa"
         },
         "6": {
           "path": "rasters/solar_1996_2025_m06.webp",
-          "bytes": 21210,
-          "sha256": "e249f86233f1cc3694a3e5235c5d173737b57e28ebe257c79692e34ac475a6bf"
+          "bytes": 20386,
+          "sha256": "16960e6062ae3e06bf215b724f5fe15daee21d7bb2da9338bf743157a26a38ad"
         },
         "7": {
           "path": "rasters/solar_1996_2025_m07.webp",
-          "bytes": 22560,
-          "sha256": "5a03928424eadcbfacdd5714c72b3a13e6bc27c3be8aa8d5e3bb22d5649c0eb8"
+          "bytes": 21480,
+          "sha256": "8f84227eaff4eafea27cc976101613482dc936e0eca586d116dc8a9315788e44"
         },
         "8": {
           "path": "rasters/solar_1996_2025_m08.webp",
-          "bytes": 21680,
-          "sha256": "25dde8647288209b23d48c2cd340baed7a6edcc173a4acd328ce6e7915abe0b8"
+          "bytes": 20704,
+          "sha256": "c890ee973e6cc681f48ecea38c948db66a3a37645a0b30a684580dcd2d360e16"
         },
         "9": {
           "path": "rasters/solar_1996_2025_m09.webp",
-          "bytes": 19994,
-          "sha256": "ca5ebd236c789a11c0458c39249ef554dd8c66ac5663237cfad08150558e1036"
+          "bytes": 19370,
+          "sha256": "808e43822bf86485af1bcbffeb228e55777d501297ef76e6dbe7619c8c0e6da2"
         },
         "10": {
           "path": "rasters/solar_1996_2025_m10.webp",
-          "bytes": 18416,
-          "sha256": "986dad66fc972a09eda86a7353ddb777b0501713f6d7165bfbfa26180e71aa82"
+          "bytes": 17814,
+          "sha256": "2e44b36ca23ef5601527323652cf8c8ee431e86c23ab3848204694b5117e857c"
         },
         "11": {
           "path": "rasters/solar_1996_2025_m11.webp",
-          "bytes": 19208,
-          "sha256": "e6991c5e5f9bfb762664aee473ab834c7f608dede3e9c895081046ec9d991384"
+          "bytes": 17856,
+          "sha256": "88fea32600b7288f67b421f4cbe42b52375bafd4192338b7604de565923b2d07"
         },
         "12": {
           "path": "rasters/solar_1996_2025_m12.webp",
-          "bytes": 20366,
-          "sha256": "9be394e68333660b3c0da28822bb030d735cf0427c425c94a7b9452514fed950"
+          "bytes": 19492,
+          "sha256": "9f985353dc6309be12a8d3aa0b74fafbc6bddcecde17f117907d12efaa2257f2"
         }
       },
       "difference": {
         "1": {
           "path": "rasters/solar_difference_m01.webp",
-          "bytes": 24180,
-          "sha256": "4abcb0e010bab613882045e1711ba74e9ab5fb994f0bce7a89930cfaef8634a6"
+          "bytes": 23332,
+          "sha256": "b019434cff676ac74ab082e0deb865116e14f20e392360f28a743ba1403fcee5"
         },
         "2": {
           "path": "rasters/solar_difference_m02.webp",
-          "bytes": 25044,
-          "sha256": "027547726db2749f9b61118800aa740f7421b483a3bd0a1a99744ac6530c26e5"
+          "bytes": 23952,
+          "sha256": "17d1761e9f4a4fa3238d2e99d77d60f8022ece5de1b6fcab075b745fc5423239"
         },
         "3": {
           "path": "rasters/solar_difference_m03.webp",
-          "bytes": 22978,
-          "sha256": "6a81dff1ef921ccdb2e6782cbc30a552642f0d039098ff1f26cc3feaf4b3cbcd"
+          "bytes": 21414,
+          "sha256": "4b8721b48a67bcc9cf0615281714f50bfffef350819e0cfb2fa586894adea138"
         },
         "4": {
           "path": "rasters/solar_difference_m04.webp",
-          "bytes": 17564,
-          "sha256": "60df160c45517f506c428f4aa08ed6455254da6d423ecbf708fb4faf06eadd52"
+          "bytes": 16818,
+          "sha256": "584db560f0acf2a5b5c804c7c95c53121e735b726d575f72f3e8f52011ff8e71"
         },
         "5": {
           "path": "rasters/solar_difference_m05.webp",
-          "bytes": 21990,
-          "sha256": "24041c2fd982f2a556bc006f775d3da2e46297ecd5bcd9d046d5c00187b38558"
+          "bytes": 21188,
+          "sha256": "c30afbc81fec11bb7d6372ad33395570eb8a1635a0a2588c88bcda8e944c7c1c"
         },
         "6": {
           "path": "rasters/solar_difference_m06.webp",
-          "bytes": 21948,
-          "sha256": "859c52203a46d2939b24f35b264578774e58791170b147daeb94f1f8fc3a541b"
+          "bytes": 20896,
+          "sha256": "801b731661b6a590ef61f2518ae4ce2d5c4d2f4d2bc5ddcb6dabc74b2ac70133"
         },
         "7": {
           "path": "rasters/solar_difference_m07.webp",
-          "bytes": 22778,
-          "sha256": "81de16004aba222bcfdfeeba284c2d016f07ec7684819220edeefdcd3a8be310"
+          "bytes": 21594,
+          "sha256": "ec4bc126e0c62e967875d74245a172f444b36d768b0af952cd2170c3c5aaca8e"
         },
         "8": {
           "path": "rasters/solar_difference_m08.webp",
-          "bytes": 23150,
-          "sha256": "4c737502568cbb9b8558fb8515bc8f168e0df7ecd4f8e3534403c625f68908b8"
+          "bytes": 22564,
+          "sha256": "118a03c67d824cd900d3c2533fc3337d44bef0850beb85f312e9f5eb23837b23"
         },
         "9": {
           "path": "rasters/solar_difference_m09.webp",
-          "bytes": 22772,
-          "sha256": "76ae656015a3379201e49a1142c6024f1e7d0b9bfe3560c2e89499ed7644974e"
+          "bytes": 22032,
+          "sha256": "fa8b2ed9dfda80b3f6e9c6e8bf5d3680483e485b23abc872800aee5107387aed"
         },
         "10": {
           "path": "rasters/solar_difference_m10.webp",
-          "bytes": 25318,
-          "sha256": "e38dcf4b7f699b021dd3a72c44a4ba99e23d74949956a1e957fdd3210c932011"
+          "bytes": 24338,
+          "sha256": "0625e4a1780972240364512a4967d5eff04d9f689b1bd68c6f19013bc5cd849f"
         },
         "11": {
           "path": "rasters/solar_difference_m11.webp",
-          "bytes": 26028,
-          "sha256": "cf6d3306a0c5f8df33936f73a9e0742f04963e3966105def7226b15b7cfaaaf9"
+          "bytes": 25182,
+          "sha256": "08498bd444c4ac7cd03d6840568275af6eeab09ab711cdbafd9a13ce85a44b38"
         },
         "12": {
           "path": "rasters/solar_difference_m12.webp",
-          "bytes": 26132,
-          "sha256": "b1b2b63f73da03298fd3a5b73f10e00f608ef408889824fdecbab58d4d0f71ce"
+          "bytes": 24944,
+          "sha256": "6b8e6c13444789d6c4a5661d87f2b8b26ab0a54b545d3b0258cf4dd4dfaab08f"
         }
       }
     }

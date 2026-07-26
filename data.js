@@ -1,5 +1,6 @@
 const decoder = new TextDecoder();
 const CLIMATE_ROOT = "./data/climate";
+const RECENT_TEMPERATURE_ROOT = "./data/recent-temperature";
 const EXPECTED_MESH_COUNT = 387717;
 
 async function fetchJson(path) {
@@ -236,14 +237,18 @@ export class ClimateDataStore {
     this.regions = null;
     this.regionIndex = [];
     this.chunkCache = new Map();
+    this.recentTemperatureManifest = null;
+    this.recentTemperature = null;
   }
 
   async initialize(requestedElement = "201") {
-    const [catalog, seasonManifest] = await Promise.all([
+    const [catalog, seasonManifest, recentTemperatureManifest] = await Promise.all([
       fetchOptionalJson(`${CLIMATE_ROOT}/catalog.json`),
       fetchJson("./data/season/manifest.json"),
+      fetchJson(`${RECENT_TEMPERATURE_ROOT}/manifest.json`),
     ]);
     this.seasonManifest = seasonManifest;
+    this.recentTemperatureManifest = recentTemperatureManifest;
 
     if (catalog) {
       if (catalog.mesh_count !== undefined && Number(catalog.mesh_count) !== EXPECTED_MESH_COUNT) {
@@ -271,15 +276,28 @@ export class ClimateDataStore {
     await this.setElement(initialCode);
 
     const version = encodeURIComponent(seasonManifest.dataset_id);
-    const [seasonLatest, regions] = await Promise.all([
+    const [seasonLatest, regions, recentTemperature] = await Promise.all([
       fetchJson(`./data/season/${seasonManifest.files.latest.path}?v=${version}`),
       fetchJson(`./data/season/${seasonManifest.files.regions.path}?v=${version}`),
+      fetchJson(
+        `${RECENT_TEMPERATURE_ROOT}/${recentTemperatureManifest.files.latest.path}`
+        + `?v=${encodeURIComponent(recentTemperatureManifest.dataset_id)}`,
+      ),
     ]);
     if (seasonLatest.dataset_id !== seasonManifest.dataset_id || regions.features?.length !== 385) {
       throw new Error("季節予報データ契約が一致しません");
     }
     this.seasonLatest = seasonLatest;
     this.regions = regions;
+    if (
+      recentTemperature.schema_version !== 1
+      || recentTemperature.dataset_id !== recentTemperatureManifest.dataset_id
+      || recentTemperature.stations?.length !== recentTemperatureManifest.station_count
+      || recentTemperature.dates?.length !== recentTemperatureManifest.date_count
+    ) {
+      throw new Error("最近の気温平年差データ契約が一致しません");
+    }
+    this.recentTemperature = recentTemperature;
     this.regionIndex = regions.features.map((feature) => ({
       feature,
       bounds: geometryBounds(feature.geometry),
@@ -427,6 +445,74 @@ export class ClimateDataStore {
       if (pointInGeometry(lon, lat, entry.feature.geometry)) return entry.feature;
     }
     return null;
+  }
+
+  recentTemperatureRange() {
+    const dates = this.recentTemperature?.dates || [];
+    return dates.length ? {
+      start: dates[0],
+      end: dates.at(-1),
+      latestCenter: this.recentTemperatureManifest.latest_graph_center_date,
+      dateCount: dates.length,
+    } : null;
+  }
+
+  recentTemperaturePeriod(start, end) {
+    const dataset = this.recentTemperature;
+    if (!dataset) throw new Error("最近の気温平年差データがありません");
+    const startIndex = dataset.dates.indexOf(start);
+    const endIndex = dataset.dates.indexOf(end);
+    if (startIndex < 0 || endIndex < startIndex) throw new Error("指定期間が収録範囲外です");
+    const expectedDays = endIndex - startIndex + 1;
+    if (expectedDays > 93) throw new Error("指定期間は93日以内にしてください");
+    const minimumValidRatio = Number(dataset.validation.minimum_valid_ratio || 0.8);
+    const normalIndex = new Map(dataset.normal_days.map((value, index) => [value, index]));
+    const selectedDates = dataset.dates.slice(startIndex, endIndex + 1);
+    const points = dataset.stations.flatMap((station) => {
+      const observed = [];
+      const dailyNormals = [];
+      selectedDates.forEach((dateText, offset) => {
+        const actual = station.observed_tenths[startIndex + offset];
+        const normal = station.normal_tenths[normalIndex.get(dateText.slice(5))];
+        if (Number.isFinite(actual) && Number.isFinite(normal)) {
+          observed.push(actual);
+          dailyNormals.push(normal);
+        }
+      });
+      if (observed.length / expectedDays < minimumValidRatio) return [];
+      const observedMean = observed.reduce((sum, value) => sum + value, 0) / observed.length / 10;
+      let normalMean;
+      let normalMethod = "daily";
+      if (expectedDays === 5 && observed.length === 5) {
+        const startNormalIndex = normalIndex.get(start.slice(5));
+        const fiveDayNormal = station.normal_5day_tenths[startNormalIndex];
+        if (!Number.isFinite(fiveDayNormal)) return [];
+        normalMean = fiveDayNormal / 10;
+        normalMethod = "official_5day";
+      } else {
+        normalMean = dailyNormals.reduce((sum, value) => sum + value, 0) / dailyNormals.length / 10;
+      }
+      return [{
+        stationId: station.station_id,
+        name: station.name,
+        lat: station.lat,
+        lon: station.lon,
+        elevationM: station.elevation_m,
+        anomaly: observedMean - normalMean,
+        observedMean,
+        normalMean,
+        validDays: observed.length,
+        expectedDays,
+        normalMethod,
+      }];
+    });
+    return {
+      start,
+      end,
+      expectedDays,
+      center: expectedDays === 5 ? dataset.dates[startIndex + 2] : null,
+      points,
+    };
   }
 }
 

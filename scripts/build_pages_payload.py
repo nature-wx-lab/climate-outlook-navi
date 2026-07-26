@@ -101,6 +101,9 @@ def catalog_climate_paths(catalog: dict[str, object]) -> set[str]:
 
 def manifest_data_paths() -> tuple[str, ...]:
     season = json.loads((ROOT / "data/season/manifest.json").read_text(encoding="utf-8"))
+    recent_temperature = json.loads(
+        (ROOT / "data/recent-temperature/manifest.json").read_text(encoding="utf-8")
+    )
     catalog_path = ROOT / "data/climate/catalog.json"
     if catalog_path.is_file():
         climate_paths = catalog_climate_paths(json.loads(catalog_path.read_text(encoding="utf-8")))
@@ -113,7 +116,12 @@ def manifest_data_paths() -> tuple[str, ...]:
         climate_paths.add(safe_manifest_path("data/climate", climate["static"]["prefectures"]["path"]))
     season_paths = {"data/season/manifest.json"}
     season_paths.update(safe_manifest_path("data/season", entry["path"]) for entry in season["files"].values())
-    return tuple(sorted(climate_paths | season_paths))
+    recent_temperature_paths = {"data/recent-temperature/manifest.json"}
+    recent_temperature_paths.update(
+        safe_manifest_path("data/recent-temperature", entry["path"])
+        for entry in recent_temperature["files"].values()
+    )
+    return tuple(sorted(climate_paths | season_paths | recent_temperature_paths))
 
 
 def copy_relative(relative_path: str, output: Path) -> None:
@@ -149,6 +157,9 @@ def main() -> None:
         (climate_catalog_path if climate_catalog_path.is_file() else climate_manifest_path).read_text(encoding="utf-8")
     )
     season_manifest = json.loads((output / "data/season/manifest.json").read_text(encoding="utf-8"))
+    recent_temperature_manifest = json.loads(
+        (output / "data/recent-temperature/manifest.json").read_text(encoding="utf-8")
+    )
     files: dict[str, dict[str, int | str]] = {}
     control_files: dict[str, dict[str, int | str]] = {}
     for path in sorted(output.rglob("*")):
@@ -165,6 +176,7 @@ def main() -> None:
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "climate_dataset_id": climate_metadata["dataset_id"],
         "season_dataset_id": season_manifest["dataset_id"],
+        "recent_temperature_dataset_id": recent_temperature_manifest["dataset_id"],
         "file_count_without_deployment_manifest": len(files) + len(control_files),
         "total_bytes_without_deployment_manifest": sum(
             int(entry["bytes"]) for entry in (*files.values(), *control_files.values())
@@ -181,6 +193,7 @@ def main() -> None:
         "source_commit": deployment["source_commit"],
         "climate_dataset_id": deployment["climate_dataset_id"],
         "season_dataset_id": deployment["season_dataset_id"],
+        "recent_temperature_dataset_id": deployment["recent_temperature_dataset_id"],
         "file_count": deployment["file_count_without_deployment_manifest"] + 1,
         "total_bytes": deployment["total_bytes_without_deployment_manifest"] + (output / "deployment.json").stat().st_size,
     }, ensure_ascii=False, indent=2))

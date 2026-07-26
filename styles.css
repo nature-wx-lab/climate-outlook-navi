@@ -24,6 +24,7 @@ body {
 button, select, input { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: wait; opacity: .58; }
+[hidden] { display: none !important; }
 .settings-toggle, .panel-close { display: none; }
 
 .topbar {
@@ -107,7 +108,7 @@ button:disabled { cursor: wait; opacity: .58; }
 h2 { margin: 0 0 8px; font-size: 14px; letter-spacing: .01em; }
 label { display: grid; gap: 4px; margin: 8px 0; color: #314b55; font-size: 12px; font-weight: 700; }
 label.control-disabled { opacity: .56; }
-select {
+select, input[type="date"] {
   width: 100%;
   min-height: 32px;
   padding: 4px 7px;
@@ -122,6 +123,7 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
 .segmented.two { grid-template-columns: repeat(2, 1fr); }
 .segmented.three { grid-template-columns: repeat(3, 1fr); }
 .segmented.stacked { grid-template-columns: 1fr; gap: 5px; }
+.segmented.recent-presets { grid-template-columns: repeat(3, 1fr); gap: 4px; }
 .segmented button, .action-grid button {
   min-height: 32px;
   padding: 4px 6px;
@@ -135,15 +137,28 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
 .segmented.two button:last-child, .segmented.three button:last-child { border-radius: 0 4px 4px 0; }
 .segmented.two button + button, .segmented.three button + button { border-left: 0; }
 .segmented.stacked button { border-radius: 4px; text-align: left; }
+.segmented.recent-presets button { border-radius: 4px; }
 .segmented button.active { color: #fff; border-color: var(--accent); background: var(--accent); }
 .segmented small { font-size: 9px; font-weight: 650; opacity: .9; }
 .muted-control { opacity: .48; }
 .range-row { grid-template-columns: 1fr; }
 .range-row input { width: 100%; accent-color: var(--accent); }
+.range-caption { color: #314b55; font-size: 11px; font-weight: 900; text-align: center; }
 .check-row { display: flex; align-items: center; gap: 7px; }
 .check-row input { accent-color: var(--accent); }
 .action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 8px; }
 .action-grid button { border-radius: 4px; }
+.date-range-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.wide-action {
+  width: 100%;
+  min-height: 34px;
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid var(--accent-dark);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+}
 .micro-note { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
 .status-card { padding: 9px; background: #f0f6f7; border: 1px solid #d2e1e4 !important; border-radius: 5px; }
 .status-card p { margin: 4px 0; color: #536970; font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
@@ -188,6 +203,7 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
   font-size: 10px;
   font-weight: 800;
 }
+body.recent-view .map-info { max-width: calc(100% - 30px); }
 .climate-legend, .season-legend {
   position: absolute;
   z-index: 700;
@@ -237,7 +253,7 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
 .season-status .unavailable { color: #8a4d15; font-weight: 800; }
 .climate-raster { image-rendering: pixelated; image-rendering: crisp-edges; }
 .leaflet-control-attribution { font-size: 8px; }
-.season-tooltip { color: var(--ink); font-size: 11px; line-height: 1.35; }
+.season-tooltip, .recent-temperature-tooltip { color: var(--ink); font-size: 11px; line-height: 1.35; }
 
 .loading-overlay {
   position: absolute;
@@ -308,6 +324,9 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
 .comparison-grid span { color: var(--muted); font-size: 9px; }
 .comparison-grid b { font-size: 15px; }
 .selected-forecast > strong { display: block; font-size: 12px; line-height: 1.35; }
+.recent-detail > strong { display: block; font-size: 12px; line-height: 1.35; }
+.recent-detail > p { margin: 4px 0; color: #4f646c; font-size: 10px; line-height: 1.45; }
+.recent-comparison .difference { color: var(--ink); background: #eef4f6; }
 .probability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 9px; }
 .probability-grid div { display: grid; gap: 3px; padding: 7px 4px; border: 1px solid #c8d5da; border-radius: 4px; text-align: center; }
 .probability-grid span { font-size: 9px; font-weight: 800; }

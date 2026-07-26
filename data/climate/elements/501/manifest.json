@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "generator_version": "2.0.1",
-  "dataset_id": "climate-baseline-501-c254a9c88fd7f131",
-  "generated_at": "2026-07-10T17:18:26+09:00",
+  "generator_version": "2.0.2",
+  "dataset_id": "climate-baseline-501-67dced9a26ef1762",
+  "generated_at": "2026-07-17T13:10:40+09:00",
   "source": {
     "logical_database_id": "naturewxlab-climate-foundation-db",
     "database_version": "v2.9",
@@ -1651,6 +1651,9 @@
       },
       "source_mesh_count": 387717,
       "unique_render_pixels": 369168,
+      "interior_hole_rule": "surrounded-by-8-render-pixels",
+      "isolated_interior_holes_filled": 593,
+      "remaining_isolated_interior_holes": 0,
       "note": "全国表示用の描画縮約。地点値は全1kmメッシュを保持するchunkから取得。"
     },
     "legends": {
@@ -1811,202 +1814,202 @@
       "1991_2020": {
         "1": {
           "path": "rasters/snowdepth_1991_2020_m01.webp",
-          "bytes": 29236,
-          "sha256": "553fd6225bbad4548c143bb0fa205089fa4e9a6d4788b98b6d38e66be7faa165"
+          "bytes": 28678,
+          "sha256": "26e901267f77ff00064f674a5bb350eea1c7975999a9d4bfef668ad8e5a7fac0"
         },
         "2": {
           "path": "rasters/snowdepth_1991_2020_m02.webp",
-          "bytes": 30162,
-          "sha256": "f7bc16e4c51c841292f0d640ad8e69e874a51fd06a5f6bcbcf4f727739bf8c2b"
+          "bytes": 29334,
+          "sha256": "b74e9041d59e8e1a5ecf9914a57e9fde3e97de73f950be65690bcacdbfb064c4"
         },
         "3": {
           "path": "rasters/snowdepth_1991_2020_m03.webp",
-          "bytes": 31468,
-          "sha256": "92b3e04d543ce2ef8d9f7e56d422238b874d5a577f1a1c965dc922fa94844840"
+          "bytes": 30804,
+          "sha256": "6b7e668ef7941b4a1c67eea1ebb40360e8d79b007a2206d556aa837bea800699"
         },
         "4": {
           "path": "rasters/snowdepth_1991_2020_m04.webp",
-          "bytes": 30450,
-          "sha256": "1b3236397a2650836492fac9d80aa9ac7004415fcc5d66238fcb0488c10e503a"
+          "bytes": 29328,
+          "sha256": "ef11f8bfd1998b536c5272ff76ced3e5dc515094963620fcfdd0027da1a6b408"
         },
         "5": {
           "path": "rasters/snowdepth_1991_2020_m05.webp",
-          "bytes": 15382,
-          "sha256": "4bce8b498bf8f6b00a5c284014a7b1bceac2288e3fe7ac73d351c5c04919a3e3"
+          "bytes": 14738,
+          "sha256": "6c2afe4408222da3fe411297d5fa024675f93952dcc24d2d0003adaa76a8004d"
         },
         "6": {
           "path": "rasters/snowdepth_1991_2020_m06.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "7": {
           "path": "rasters/snowdepth_1991_2020_m07.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "8": {
           "path": "rasters/snowdepth_1991_2020_m08.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "9": {
           "path": "rasters/snowdepth_1991_2020_m09.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "10": {
           "path": "rasters/snowdepth_1991_2020_m10.webp",
-          "bytes": 15306,
-          "sha256": "6f6bac86abd761266cca947dfc07d11fed5c60b0c17038c1451fa0b6052782c6"
+          "bytes": 14644,
+          "sha256": "e23e1d009d23fd104ca3b17c0698d6dbdcdeefb89c554ec31921fd42f6376507"
         },
         "11": {
           "path": "rasters/snowdepth_1991_2020_m11.webp",
-          "bytes": 21816,
-          "sha256": "bf2ad0473886a1b1c7074af1b9273a43b6a9420d7481c255a8c016b6c4a2eeff"
+          "bytes": 20852,
+          "sha256": "b120fbbbe1cb1da2bb5430d02ab8d5d9b6907a6cab413dea21cdc04e0873aca8"
         },
         "12": {
           "path": "rasters/snowdepth_1991_2020_m12.webp",
-          "bytes": 26826,
-          "sha256": "7b10bdb8bae1c6ccd96ff4f8e6a4510390869125bca40c5a3ce1846078e28ad5"
+          "bytes": 25722,
+          "sha256": "824fd216661cbbe48433480b692dfbb6a18ce35169eaf3202f59ebf0e9feafc9"
         },
         "13": {
           "path": "rasters/snowdepth_1991_2020_m13.webp",
-          "bytes": 24460,
-          "sha256": "5eebffc5fd8070b1e5f198e85f37be597aaf6a24188c8e7cf886715763e07b2a"
+          "bytes": 23850,
+          "sha256": "ac6859fc8cd7c2760e01046d00284d7efe3a263a794cfbc8d083f80a3d7828e1"
         }
       },
       "1996_2025": {
         "1": {
           "path": "rasters/snowdepth_1996_2025_m01.webp",
-          "bytes": 29676,
-          "sha256": "e887b0ee6882c310623ac3f280f5fc0fdc2f69b43778bb58a7186c4c6d3a17f3"
+          "bytes": 28864,
+          "sha256": "1106a0040d91c996ee9c0bfd9802143ae5bd77e218353c70d573cd94e8013483"
         },
         "2": {
           "path": "rasters/snowdepth_1996_2025_m02.webp",
-          "bytes": 30004,
-          "sha256": "a6e18de198363c30cbdee110a8f75671f6d61849fdbe3e6e7d01e631b8ed5459"
+          "bytes": 29298,
+          "sha256": "f114317ea9d170a6deb031ba3a9d306c0fa120c126ac38828ea467a64c072aa0"
         },
         "3": {
           "path": "rasters/snowdepth_1996_2025_m03.webp",
-          "bytes": 31418,
-          "sha256": "9a64047efbafd604afe20a78c531b6c8d5ee8e1bf8ab42e94747c91cda2cdda0"
+          "bytes": 30798,
+          "sha256": "b64a4dda7873e447ded6bcffa1c6658d3b875ee813a293b63f5bbda4d4cdce2f"
         },
         "4": {
           "path": "rasters/snowdepth_1996_2025_m04.webp",
-          "bytes": 30094,
-          "sha256": "a3c626e79ce705964882dcf2a7ac73ceb849ac43b2f9381e0203b4dba8c01fd7"
+          "bytes": 29196,
+          "sha256": "b6f65147b14b7f7ff2f3c70eebb9c4da52ca0bf3b6eaf3c83e643e790fde178b"
         },
         "5": {
           "path": "rasters/snowdepth_1996_2025_m05.webp",
-          "bytes": 14704,
-          "sha256": "c58a556cb4b0c8a54b3fd92321b8f6ca1c566d5d2015f7f18173b72c5a5d7efc"
+          "bytes": 14064,
+          "sha256": "1359b190b6b1e5034b9a42ab52368c35908d7327a76c8b021671d48c510dec8d"
         },
         "6": {
           "path": "rasters/snowdepth_1996_2025_m06.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "7": {
           "path": "rasters/snowdepth_1996_2025_m07.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "8": {
           "path": "rasters/snowdepth_1996_2025_m08.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "9": {
           "path": "rasters/snowdepth_1996_2025_m09.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "10": {
           "path": "rasters/snowdepth_1996_2025_m10.webp",
-          "bytes": 15382,
-          "sha256": "f8d8479319066627eaf2a7130bf07e6295c7db136b610116767a65e238526382"
+          "bytes": 14706,
+          "sha256": "c8594e510feeb4df7a735f4f088b3dd6e17b48ea47335640205ad4e6686a39bf"
         },
         "11": {
           "path": "rasters/snowdepth_1996_2025_m11.webp",
-          "bytes": 22076,
-          "sha256": "c84a31e84c5631b562c607cd380f111fbe09ec3acf9ef565b987b214924ecc51"
+          "bytes": 21260,
+          "sha256": "68c38ad0909601789072ffebbc21e709ddeb2280a2454d0e83dcfc0bebc1b7bc"
         },
         "12": {
           "path": "rasters/snowdepth_1996_2025_m12.webp",
-          "bytes": 27182,
-          "sha256": "4e199f71f36cf686aa412752bd7fb7b8aa90aac409152a16809cb07faf19425d"
+          "bytes": 26278,
+          "sha256": "7088659b3d09f2e7c45381342d6762136f1c32019469ee500abb9a2aaab80fde"
         },
         "13": {
           "path": "rasters/snowdepth_1996_2025_m13.webp",
-          "bytes": 24866,
-          "sha256": "a0fc54765db6ac0e3be6561af5ab85f8d9e0bdd1698cdd4c9fb6a8d5ea9c3bfc"
+          "bytes": 24042,
+          "sha256": "5691312a781810d240f5b829de1ad95cfda33b768a3cc36164a415a3c89be066"
         }
       },
       "difference": {
         "1": {
           "path": "rasters/snowdepth_difference_m01.webp",
-          "bytes": 19362,
-          "sha256": "01fcb339575708d9ede4758a3872d87d9faa832208a6c9f3fd0a702028ca6cef"
+          "bytes": 18454,
+          "sha256": "8e00b789440f1c08e2d0e1eba675497237eb3077f62473f5ca4fe016e4622398"
         },
         "2": {
           "path": "rasters/snowdepth_difference_m02.webp",
-          "bytes": 20128,
-          "sha256": "34350d3616dcc220e61e9bd12c0a18f7e96312a67fd761ea6f713b3af80d8fcc"
+          "bytes": 19082,
+          "sha256": "e679117d8d3ea27d6deb2cd890de6dfe476ac882339e38bce055893acff8b2a8"
         },
         "3": {
           "path": "rasters/snowdepth_difference_m03.webp",
-          "bytes": 19790,
-          "sha256": "e8e04311da98c0863bb913a5f4e0ff8df56a799acc5034ca04cb3631b6b6b26c"
+          "bytes": 18862,
+          "sha256": "87666e89aa92300105af38cec8bae5b45ac2b176a2af81844fc1eea186ea1119"
         },
         "4": {
           "path": "rasters/snowdepth_difference_m04.webp",
-          "bytes": 20942,
-          "sha256": "c7a28c83f180299f6ee7c43da82d2d3651b569b386fd76058918efb8f53171ec"
+          "bytes": 20116,
+          "sha256": "69482f45df43da94b7ac040258d2a2a86094d9bea7b30c424d8cf9cc5f8e1eca"
         },
         "5": {
           "path": "rasters/snowdepth_difference_m05.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "6": {
           "path": "rasters/snowdepth_difference_m06.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "7": {
           "path": "rasters/snowdepth_difference_m07.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "8": {
           "path": "rasters/snowdepth_difference_m08.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "9": {
           "path": "rasters/snowdepth_difference_m09.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "10": {
           "path": "rasters/snowdepth_difference_m10.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "11": {
           "path": "rasters/snowdepth_difference_m11.webp",
-          "bytes": 17546,
-          "sha256": "1e39b1896377ec2cdb5e3a44a3ef05a8882db0fc6a3a408bdbe135ce52bb2f70"
+          "bytes": 16824,
+          "sha256": "dab312d85ca1d3724957f7fae4cb276187ba5f0c564655930fadd6eb1c728ff8"
         },
         "12": {
           "path": "rasters/snowdepth_difference_m12.webp",
-          "bytes": 17508,
-          "sha256": "1363d78ac53a9b6a689b833833048ff713ee7c5e4f96e5db5fc7b4f27b52c220"
+          "bytes": 17056,
+          "sha256": "f3d46bd2a099534264488b91eb4ec0431b6389079876db23b64199388d042db9"
         },
         "13": {
           "path": "rasters/snowdepth_difference_m13.webp",
-          "bytes": 15890,
-          "sha256": "f79e343df7661b670f17f3b552336043109bcbb825694bd24496a0c12d4fe8cb"
+          "bytes": 15104,
+          "sha256": "16ac742512e1bb3faef0568c86dbb1ec3914f3da641935694d3f07f8f73cc06f"
         }
       }
     }

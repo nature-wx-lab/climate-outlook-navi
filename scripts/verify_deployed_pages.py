@@ -72,6 +72,7 @@ def main() -> None:
         "source_commit": deployment["source_commit"],
         "climate_dataset_id": deployment["climate_dataset_id"],
         "season_dataset_id": deployment["season_dataset_id"],
+        "recent_temperature_dataset_id": deployment["recent_temperature_dataset_id"],
         "verified_file_count": len(verified),
         "verified_bytes": sum(size for _, size in verified),
         "status": "ok",

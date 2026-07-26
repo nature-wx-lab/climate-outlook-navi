@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "generator_version": "2.0.1",
-  "dataset_id": "climate-baseline-503-a31f34d867f8d70b",
-  "generated_at": "2026-07-10T17:18:26+09:00",
+  "generator_version": "2.0.2",
+  "dataset_id": "climate-baseline-503-284dd43e0d2130f2",
+  "generated_at": "2026-07-17T13:10:40+09:00",
   "source": {
     "logical_database_id": "naturewxlab-climate-foundation-db",
     "database_version": "v2.9",
@@ -1651,6 +1651,9 @@
       },
       "source_mesh_count": 387717,
       "unique_render_pixels": 369168,
+      "interior_hole_rule": "surrounded-by-8-render-pixels",
+      "isolated_interior_holes_filled": 593,
+      "remaining_isolated_interior_holes": 0,
       "note": "全国表示用の描画縮約。地点値は全1kmメッシュを保持するchunkから取得。"
     },
     "legends": {
@@ -1811,202 +1814,202 @@
       "1991_2020": {
         "1": {
           "path": "rasters/snowfall_1991_2020_m01.webp",
-          "bytes": 24466,
-          "sha256": "3dfada19c5e1bbf23923e6b1d4603b2e254a9a914bb1d1f10b9b01879a1cf5be"
+          "bytes": 23998,
+          "sha256": "cb4d1507989ca5542566b899230507486d2747b1f8928cceeff5408782ff8ba6"
         },
         "2": {
           "path": "rasters/snowfall_1991_2020_m02.webp",
-          "bytes": 23660,
-          "sha256": "2855fc3aa2dfbd8c95e2008766fb67147340136937510dfd4b407129790f368d"
+          "bytes": 23018,
+          "sha256": "6053101bfc9718aeca18cd988023775a5168f3e1fc0e0ca6c6bad5bf368672e8"
         },
         "3": {
           "path": "rasters/snowfall_1991_2020_m03.webp",
-          "bytes": 23294,
-          "sha256": "515a139dfd7fe84db78b7dbcf6d6c79f8944cbb3433bc9cc221a93fd3c602fd9"
+          "bytes": 22264,
+          "sha256": "a5571208be9aeccbaed4bb55d07869502309c8c9b89856c17a05582a06493bda"
         },
         "4": {
           "path": "rasters/snowfall_1991_2020_m04.webp",
-          "bytes": 19502,
-          "sha256": "6d90011f65cc265d33b120c686c64a2e7f078810c325f50a6613e327d28dac39"
+          "bytes": 18620,
+          "sha256": "a741e4d43b19a51b2ed7b4d2980b10b1ef8a8c1dd2c09891900d8482c4fede3b"
         },
         "5": {
           "path": "rasters/snowfall_1991_2020_m05.webp",
-          "bytes": 15438,
-          "sha256": "dc965e3eea0463bdc3277828fe5ca25a3ee39136a3ce31192b0c92b93e3ab7d7"
+          "bytes": 14802,
+          "sha256": "b9a8c58dd467badfef57cd1a8d3bd34d865078307da4adadd1fde78126e245c9"
         },
         "6": {
           "path": "rasters/snowfall_1991_2020_m06.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "7": {
           "path": "rasters/snowfall_1991_2020_m07.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "8": {
           "path": "rasters/snowfall_1991_2020_m08.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "9": {
           "path": "rasters/snowfall_1991_2020_m09.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "10": {
           "path": "rasters/snowfall_1991_2020_m10.webp",
-          "bytes": 15638,
-          "sha256": "9fdc46561ea6fda771858bb1babeadd0596ce4292cf4f7954f3a9e0c669fa3d8"
+          "bytes": 14950,
+          "sha256": "ca6996676a24a0f9455dd80ef9bbd2aa178fe5d4a285f3c57ef66d2bb2c4083d"
         },
         "11": {
           "path": "rasters/snowfall_1991_2020_m11.webp",
-          "bytes": 20410,
-          "sha256": "4ec8526afc0d1a0bf49a48b658ae1e9490b868d2de159dc9278c9dadb0816180"
+          "bytes": 19516,
+          "sha256": "f915b68971f0c0cd30cc8dacda7714e070d74371e4abcaa0dfa5d64d65da7d6e"
         },
         "12": {
           "path": "rasters/snowfall_1991_2020_m12.webp",
-          "bytes": 24228,
-          "sha256": "026da13bdb68281ad2c9525defecb878c04362e973ba040a9d35a94413f3fe1b"
+          "bytes": 22894,
+          "sha256": "b659d5d05ee34b3b8f4efd16823b2a6f0fdabc4fda2ecb2bd849c6cbc838db2e"
         },
         "13": {
           "path": "rasters/snowfall_1991_2020_m13.webp",
-          "bytes": 24460,
-          "sha256": "e33d421bd6a8b9b39030c8c0dddcb733a9590a4173ef311213042d1c23df3091"
+          "bytes": 23434,
+          "sha256": "86ae8a7fadb0f4be9c73b095a47b2d221653adea6b10db6583d0c47da3559756"
         }
       },
       "1996_2025": {
         "1": {
           "path": "rasters/snowfall_1996_2025_m01.webp",
-          "bytes": 24938,
-          "sha256": "9485539080f69c887f81a050c1ecfbeebd5f8a97736d9bb784a2c74f87be06fd"
+          "bytes": 24114,
+          "sha256": "692716a477fe48b24f60c0af9408ad4d2a21cf642d34475909ca7b5ed9082584"
         },
         "2": {
           "path": "rasters/snowfall_1996_2025_m02.webp",
-          "bytes": 23740,
-          "sha256": "d0db00489f59c006f3a9be77d71c8b7df89e78716ab31eb1b4d8e0d6d65a3cdd"
+          "bytes": 22808,
+          "sha256": "430df6f2f1f0f1fd8b1b4c18fa2e6bf38b8cac02d375a8fdf2ffb73b253b5162"
         },
         "3": {
           "path": "rasters/snowfall_1996_2025_m03.webp",
-          "bytes": 22060,
-          "sha256": "63f8b8b59c535ab920cda102e64ba940c520729f4d2deb16c56586e8bf4de330"
+          "bytes": 21218,
+          "sha256": "25bc18308692c2b6a76ee8bef7f8c0099ff92b37089ec350d2fa4d922aeb37d6"
         },
         "4": {
           "path": "rasters/snowfall_1996_2025_m04.webp",
-          "bytes": 18542,
-          "sha256": "2be4f64d5ed0186a39691700bc62a6efa7acf2806b7bdb21fd13498599cffce7"
+          "bytes": 17908,
+          "sha256": "7f454da6d71aafd609d5aabc688b757969e55ac45971d3ed9ac176659fa19885"
         },
         "5": {
           "path": "rasters/snowfall_1996_2025_m05.webp",
-          "bytes": 14750,
-          "sha256": "3a6ee4140419f796588ed506a2dcfa2ee6fb8ccc6f470f71373a10c3de6b6fda"
+          "bytes": 14120,
+          "sha256": "58bf84b9102109400aed8b997edc1e741b7228ed7961f1d8281b49d983ea6fd4"
         },
         "6": {
           "path": "rasters/snowfall_1996_2025_m06.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "7": {
           "path": "rasters/snowfall_1996_2025_m07.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "8": {
           "path": "rasters/snowfall_1996_2025_m08.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "9": {
           "path": "rasters/snowfall_1996_2025_m09.webp",
-          "bytes": 13750,
-          "sha256": "348f8fd4d2b04633bc3ee16afb72bc432ddadeb46e5bc623a1f9e1af81a7d8f3"
+          "bytes": 13262,
+          "sha256": "b5c1079948b8dc4a68e4881a820e7ea8371a3f087edea2119abcba91608b635a"
         },
         "10": {
           "path": "rasters/snowfall_1996_2025_m10.webp",
-          "bytes": 15628,
-          "sha256": "fa393a13ec9fde0630c498e3b60b26830ee432fcce5ac71ebf1a9df546b5b7b2"
+          "bytes": 14984,
+          "sha256": "bf1a80a20f8b75f6d30d5101e1eae69ce2c9a6b0c144f39d6e2d4149783dfd59"
         },
         "11": {
           "path": "rasters/snowfall_1996_2025_m11.webp",
-          "bytes": 20260,
-          "sha256": "827b1bf785ac5e700ca28366bca47c69526695325970fb3266f8de4f00e66c8d"
+          "bytes": 19616,
+          "sha256": "f9ecbd37064120af9113c5ea9407e1724fea08ee2fb10ec475a9fe1e51ab31bd"
         },
         "12": {
           "path": "rasters/snowfall_1996_2025_m12.webp",
-          "bytes": 23526,
-          "sha256": "9f9b1a940e7041c4f13ef11c2510a0712e7291c0f4aeda6a5745ef24584c60cd"
+          "bytes": 22702,
+          "sha256": "da8c8ba83e3eca4b7cb7ca2fdfb836cf5bb8755a1ff035cad045be2428b9f036"
         },
         "13": {
           "path": "rasters/snowfall_1996_2025_m13.webp",
-          "bytes": 24224,
-          "sha256": "c354da35da4e9a83684a4e27f8ccc55078a1f6f2408b39bfa7ded97f31a4891f"
+          "bytes": 23456,
+          "sha256": "3214000344f7ed9f1df275fb043036ec537668e646a7e811f24cf98cd0457a96"
         }
       },
       "difference": {
         "1": {
           "path": "rasters/snowfall_difference_m01.webp",
-          "bytes": 18284,
-          "sha256": "f26d42eb96eb9feee903e158cce0f9f269a9a1aa7a6573e230b92a603afaac16"
+          "bytes": 16964,
+          "sha256": "3cffb27435d9d20218bcd6e9adc5fdda6adbd22043ed45db5f0ad5da0dac5125"
         },
         "2": {
           "path": "rasters/snowfall_difference_m02.webp",
-          "bytes": 17348,
-          "sha256": "f5348f4af3d144edfb14cccd2a3b057839f407521be1aba320b197de3722eda4"
+          "bytes": 16588,
+          "sha256": "bdf31269368d11466a65d3d9d86f529efd4160e220a68f18d320fd5a144b48ef"
         },
         "3": {
           "path": "rasters/snowfall_difference_m03.webp",
-          "bytes": 16602,
-          "sha256": "774a0e19b9f4442600afb1784e6656a86a43d601379a778020870f55ad95c5e2"
+          "bytes": 15620,
+          "sha256": "7ae5d3c3806d4ad420deae1ad9fab6265d3f213694df16c1e88754cac7bf5731"
         },
         "4": {
           "path": "rasters/snowfall_difference_m04.webp",
-          "bytes": 14504,
-          "sha256": "f4e3bada815142fd8db41405f2b53500d8a92accb7d47694404e90c47af8b886"
+          "bytes": 13808,
+          "sha256": "03a808dad4351177c617ad14eb2cf156f344c6d55688218ec19550d6f2a8960f"
         },
         "5": {
           "path": "rasters/snowfall_difference_m05.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "6": {
           "path": "rasters/snowfall_difference_m06.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "7": {
           "path": "rasters/snowfall_difference_m07.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "8": {
           "path": "rasters/snowfall_difference_m08.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "9": {
           "path": "rasters/snowfall_difference_m09.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "10": {
           "path": "rasters/snowfall_difference_m10.webp",
-          "bytes": 13750,
-          "sha256": "4491f183d58abd8c5254261fadb57429bdcdd6436283e3e79d70d11f5a536e2b"
+          "bytes": 13262,
+          "sha256": "dccbe03ed868f218519e56743c89a8340bd75e3a2c3aab1a27c9b9307e55e5a5"
         },
         "11": {
           "path": "rasters/snowfall_difference_m11.webp",
-          "bytes": 14628,
-          "sha256": "1ba8d61ff53dfc618eaa25946d2b69d41e83ad269ab06b27f5c5417e5c3b0efe"
+          "bytes": 14048,
+          "sha256": "226dc39f013600a12c8b4849e792a73ec579b68b23ba41ef3316916461c3df46"
         },
         "12": {
           "path": "rasters/snowfall_difference_m12.webp",
-          "bytes": 16832,
-          "sha256": "e42585dd2f197853b440725f3914519ade70380cf7dde466e02eddd918b14dae"
+          "bytes": 16218,
+          "sha256": "eaa7ae64c1d629502abc0108dd541276af2c86e60caa21feb16750571e52cd16"
         },
         "13": {
           "path": "rasters/snowfall_difference_m13.webp",
-          "bytes": 20748,
-          "sha256": "3f3028b04e6c29790cf32ae9255351ca4324f4138df4ecf24e8ba692d4b8bcff"
+          "bytes": 19136,
+          "sha256": "715786fc7775472b462fb94413e531f7d49109157e0c5c2834bb9955504decc2"
         }
       }
     }

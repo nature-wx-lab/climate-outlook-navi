@@ -36,10 +36,11 @@ WINDOW_LABELS = {
 EXPECTED_MESH_COUNT = 387_717
 EXPECTED_PREFIX_COUNT = 176
 VALUE_SCALE = 100
-GENERATOR_VERSION = "2.0.1"
+GENERATOR_VERSION = "2.0.2"
 CATALOG_SCHEMA_VERSION = 1
 RASTER_ZOOM = 7
 RASTER_PADDING = 3
+RASTER_INTERIOR_HOLE_RULE = "surrounded-by-8-render-pixels"
 DIFFERENCE_WORDING = "30年平均値の更新差（1996–2025 − 1991–2020）"
 
 TEMP_COLORS = [
@@ -256,6 +257,7 @@ def generator_config_hash() -> str:
         "catalog_schema_version": CATALOG_SCHEMA_VERSION,
         "raster_zoom": RASTER_ZOOM,
         "raster_padding": RASTER_PADDING,
+        "raster_interior_hole_rule": RASTER_INTERIOR_HOLE_RULE,
         "difference_wording": DIFFERENCE_WORDING,
         "chunk_v1_format": "<8sIIHHHh",
         "chunk_v2_format": "<8sIIHHHBBI",
@@ -418,7 +420,22 @@ def render_geometry(lats: np.ndarray, lons: np.ndarray) -> dict[str, Any]:
     point_mask = np.zeros((height, width), dtype=bool)
     point_mask[py, px] = True
     distance, nearest = ndimage.distance_transform_edt(~point_mask, return_indices=True)
-    mask_y, mask_x = np.nonzero(distance <= 1.35)
+    render_mask = distance <= 1.35
+    neighbor_kernel = np.ones((3, 3), dtype=np.uint8)
+    neighbor_kernel[1, 1] = 0
+    neighbor_count = ndimage.convolve(
+        render_mask.astype(np.uint8), neighbor_kernel, mode="constant", cval=0
+    )
+    isolated_holes = (~render_mask) & (neighbor_count == 8)
+    isolated_holes_filled = int(np.count_nonzero(isolated_holes))
+    render_mask |= isolated_holes
+    remaining_neighbor_count = ndimage.convolve(
+        render_mask.astype(np.uint8), neighbor_kernel, mode="constant", cval=0
+    )
+    remaining_isolated_holes = int(np.count_nonzero((~render_mask) & (remaining_neighbor_count == 8)))
+    if remaining_isolated_holes:
+        raise ValueError(f"Raster geometry retains {remaining_isolated_holes} isolated interior holes")
+    mask_y, mask_x = np.nonzero(render_mask)
     return {
         "px": px, "py": py, "mask_y": mask_y, "mask_x": mask_x,
         "nearest_y": nearest[0, mask_y, mask_x], "nearest_x": nearest[1, mask_y, mask_x],
@@ -429,6 +446,9 @@ def render_geometry(lats: np.ndarray, lons: np.ndarray) -> dict[str, Any]:
         },
         "source_mesh_count": int(lats.size),
         "unique_render_pixels": int(np.unique(py.astype(np.int64) * width + px).size),
+        "interior_hole_rule": RASTER_INTERIOR_HOLE_RULE,
+        "isolated_interior_holes_filled": isolated_holes_filled,
+        "remaining_isolated_interior_holes": remaining_isolated_holes,
     }
 
 
@@ -605,6 +625,9 @@ def build_element(code: str, spec: dict[str, Any], data_root: Path, output_root:
                 "width": geometry["width"], "height": geometry["height"], "bounds": geometry["bounds"],
                 "source_mesh_count": geometry["source_mesh_count"],
                 "unique_render_pixels": geometry["unique_render_pixels"],
+                "interior_hole_rule": geometry["interior_hole_rule"],
+                "isolated_interior_holes_filled": geometry["isolated_interior_holes_filled"],
+                "remaining_isolated_interior_holes": geometry["remaining_isolated_interior_holes"],
                 "note": "全国表示用の描画縮約。地点値は全1kmメッシュを保持するchunkから取得。",
             },
             "legends": spec["legends"], "files": raster_files,

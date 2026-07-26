@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import struct
+from datetime import date, timedelta
 from pathlib import Path, PurePosixPath
 
 import numpy as np
@@ -472,6 +473,21 @@ def verify_element_manifest(
 
     rasters = manifest.get("rasters")
     require(isinstance(rasters, dict), f"element {code} raster metadata missing")
+    render = rasters.get("render")
+    require(isinstance(render, dict), f"element {code} raster render metadata missing")
+    require(
+        render.get("interior_hole_rule") == "surrounded-by-8-render-pixels",
+        f"element {code} raster interior-hole rule mismatch",
+    )
+    require(
+        isinstance(render.get("isolated_interior_holes_filled"), int)
+        and render["isolated_interior_holes_filled"] > 0,
+        f"element {code} raster interior-hole repair was not recorded",
+    )
+    require(
+        render.get("remaining_isolated_interior_holes") == 0,
+        f"element {code} raster retains isolated interior holes",
+    )
     verify_element_legends(code, rasters)
     raster_entries = nested_asset_entries(rasters.get("files"))
     require(len(raster_entries) == len(month_ids) * 3, f"element {code} raster count mismatch")
@@ -599,6 +615,128 @@ def verify_climate(site_root: Path) -> dict[str, object]:
     if (site_root / "data/climate/catalog.json").is_file():
         return verify_climate_catalog(site_root)
     return verify_climate_legacy(site_root)
+
+
+def verify_recent_temperature(site_root: Path) -> dict[str, object]:
+    root = site_root / "data" / "recent-temperature"
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+    require(manifest.get("schema_version") == 1, "recent-temperature manifest schema mismatch")
+    require(
+        isinstance(manifest.get("dataset_id"), str)
+        and re.fullmatch(r"recent-temperature-[0-9a-f]{16}", manifest["dataset_id"]) is not None,
+        "recent-temperature dataset ID mismatch",
+    )
+    files = manifest.get("files")
+    require(isinstance(files, dict) and set(files) == {"latest"}, "recent-temperature file inventory mismatch")
+    entry = files["latest"]
+    require(entry.get("path") == "latest.json", "recent-temperature latest path mismatch")
+    latest_path = root / "latest.json"
+    require(latest_path.is_file(), "recent-temperature latest dataset missing")
+    require(latest_path.stat().st_size == entry.get("bytes"), "recent-temperature byte count mismatch")
+    require(sha256_path(latest_path) == entry.get("sha256"), "recent-temperature checksum mismatch")
+    actual_files = {path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()}
+    require(actual_files == {"manifest.json", "latest.json"}, "recent-temperature file set mismatch")
+
+    dataset = json.loads(latest_path.read_text(encoding="utf-8"))
+    require(dataset.get("schema_version") == 1, "recent-temperature dataset schema mismatch")
+    require(dataset.get("dataset_id") == manifest["dataset_id"], "recent-temperature dataset ID mismatch")
+    dates = dataset.get("dates")
+    require(isinstance(dates, list) and 93 <= len(dates) <= 180, "recent-temperature date count mismatch")
+    parsed_dates = [date.fromisoformat(value) for value in dates]
+    require(
+        all(current - previous == timedelta(days=1) for previous, current in zip(parsed_dates, parsed_dates[1:])),
+        "recent-temperature dates must be consecutive",
+    )
+    require(
+        dates[0] == manifest.get("observation_start")
+        and dates[-1] == manifest.get("observation_end")
+        and len(dates) == manifest.get("date_count"),
+        "recent-temperature observation range mismatch",
+    )
+    require(
+        manifest.get("latest_graph_center_date") == (parsed_dates[-1] - timedelta(days=2)).isoformat(),
+        "recent-temperature graph center mismatch",
+    )
+    normal_days = dataset.get("normal_days")
+    require(
+        isinstance(normal_days, list)
+        and len(normal_days) == 366
+        and len(set(normal_days)) == 366
+        and "02-29" in normal_days,
+        "recent-temperature normal-day calendar mismatch",
+    )
+    require(dataset.get("normal", {}).get("period") == "1991-2020", "recent-temperature normal period mismatch")
+    require(dataset.get("element", {}).get("code") == "201", "recent-temperature element mismatch")
+    validation = dataset.get("validation")
+    require(isinstance(validation, dict), "recent-temperature validation missing")
+    require(validation.get("minimum_valid_ratio") == 0.8, "recent-temperature missing-data threshold mismatch")
+    crosscheck = validation.get("latest_five_day_crosscheck")
+    require(isinstance(crosscheck, dict), "recent-temperature five-day crosscheck missing")
+    require(
+        crosscheck.get("official_end_date") == dates[-1]
+        and crosscheck.get("compared_station_count", 0) >= 145
+        and crosscheck.get("difference_over_tolerance_count") == 0
+        and crosscheck.get("tolerance_c") == 0.1
+        and crosscheck.get("maximum_absolute_difference_c", 99) <= 0.1,
+        "recent-temperature latest five-day crosscheck mismatch",
+    )
+
+    stations = dataset.get("stations")
+    require(
+        isinstance(stations, list)
+        and 145 <= len(stations) <= 160
+        and len(stations) == manifest.get("station_count"),
+        "recent-temperature station count mismatch",
+    )
+    station_ids: set[str] = set()
+    total_observations = 0
+    for station in stations:
+        require(isinstance(station, dict), "recent-temperature station entry invalid")
+        station_id = station.get("station_id")
+        require(
+            isinstance(station_id, str)
+            and re.fullmatch(r"\d{5}", station_id) is not None
+            and station_id not in station_ids,
+            "recent-temperature station ID mismatch",
+        )
+        station_ids.add(station_id)
+        require(isinstance(station.get("name"), str) and station["name"], "recent-temperature station name missing")
+        require(20 <= station.get("lat", 0) <= 47, "recent-temperature station latitude mismatch")
+        require(122 <= station.get("lon", 0) <= 154, "recent-temperature station longitude mismatch")
+        for key in ("normal_tenths", "normal_5day_tenths"):
+            values = station.get(key)
+            require(
+                isinstance(values, list)
+                and len(values) == 366
+                and all(isinstance(value, int) and -600 <= value <= 600 for value in values),
+                f"recent-temperature {key} mismatch: {station_id}",
+            )
+        observed = station.get("observed_tenths")
+        require(
+            isinstance(observed, list)
+            and len(observed) == len(dates)
+            and all(value is None or isinstance(value, int) and -600 <= value <= 600 for value in observed),
+            f"recent-temperature observations mismatch: {station_id}",
+        )
+        require(
+            sum(value is not None for value in observed) / len(observed) >= 0.8,
+            f"recent-temperature station coverage mismatch: {station_id}",
+        )
+        total_observations += sum(value is not None for value in observed)
+
+    return {
+        "schema_version": 1,
+        "dataset_id": manifest["dataset_id"],
+        "station_count": len(stations),
+        "date_count": len(dates),
+        "observation_count": total_observations,
+        "observation_start": dates[0],
+        "observation_end": dates[-1],
+        "latest_graph_center_date": manifest["latest_graph_center_date"],
+        "latest_five_day_compared": crosscheck["compared_station_count"],
+        "latest_five_day_maximum_difference_c": crosscheck["maximum_absolute_difference_c"],
+        "checksums_ok": True,
+    }
 
 
 def verify_probability_regions(
@@ -890,6 +1028,14 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require('document.body.classList.toggle("has-preview"' in app_script, "narrow live preview visibility state is missing")
     require("selectionPending" in app_script, "point selection/hover race guard is missing")
     require("HOVER_INTERVAL_MS = 100" in app_script, "live point preview throttle contract changed")
+    require('data-map-mode="recent"' in index, "recent temperature map mode is missing")
+    require('id="recentStart"' in index and 'id="recentEnd"' in index, "recent period date controls are missing")
+    require('id="recentCenterSlider"' in index, "five-day center-date slider is missing")
+    require("recentTemperaturePeriod(start, end)" in (site_root / "data.js").read_text(encoding="utf-8"), "recent period calculation is missing")
+    require("normal_5day_tenths" in (site_root / "data.js").read_text(encoding="utf-8"), "official five-day normal routing is missing")
+    require("setRecentTemperature(points, visible = true)" in map_script, "recent station map layer is missing")
+    require("recentTemperatureTooltip(point)" in map_script, "recent station tooltip is missing")
+    require("地点間は補間していません" in index, "recent point-map non-interpolation note is missing")
     return {
         "text_files_scanned": scanned,
         "blocked_hits": len(hits),
@@ -908,6 +1054,9 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "live_cursor_preview": True,
         "click_to_pin": True,
         "pinned_monthly_chart": True,
+        "recent_temperature_period_map": True,
+        "recent_temperature_five_day_slider": True,
+        "recent_temperature_point_only": True,
     }
 
 
@@ -920,6 +1069,7 @@ def main() -> None:
         "site_root": site_root.name,
         "climate": verify_climate(site_root),
         "season": verify_season(site_root),
+        "recent_temperature": verify_recent_temperature(site_root),
         "hygiene": verify_hygiene(site_root),
         "status": "ok",
     }

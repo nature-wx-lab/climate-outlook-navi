@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "generator_version": "2.0.1",
-  "dataset_id": "climate-baseline-202-e471575d4b5b0c11",
-  "generated_at": "2026-07-10T17:18:26+09:00",
+  "generator_version": "2.0.2",
+  "dataset_id": "climate-baseline-202-9f6b6eababd8a37a",
+  "generated_at": "2026-07-17T13:10:40+09:00",
   "source": {
     "logical_database_id": "naturewxlab-climate-foundation-db",
     "database_version": "v2.9",
@@ -1651,6 +1651,9 @@
       },
       "source_mesh_count": 387717,
       "unique_render_pixels": 369168,
+      "interior_hole_rule": "surrounded-by-8-render-pixels",
+      "isolated_interior_holes_filled": 593,
+      "remaining_isolated_interior_holes": 0,
       "note": "全国表示用の描画縮約。地点値は全1kmメッシュを保持するchunkから取得。"
     },
     "legends": {
@@ -1843,202 +1846,202 @@
       "1991_2020": {
         "1": {
           "path": "rasters/tmaxmean_1991_2020_m01.webp",
-          "bytes": 60476,
-          "sha256": "08c71e9ab4d06726c4d10450aee77a49365b261c59d030af679582532dc16f42"
+          "bytes": 59674,
+          "sha256": "b60f13a520c8a6b2344dfcc438037068d71803c421fa996fb80f649a6bb38231"
         },
         "2": {
           "path": "rasters/tmaxmean_1991_2020_m02.webp",
-          "bytes": 55256,
-          "sha256": "e902b7339878a7d7ac67c829168f32ce4c1bfcbf6042b6f16e306bd284129936"
+          "bytes": 54194,
+          "sha256": "ab82525920e1c2ae55d1c687c7c2af12f033e23d9c47884eab4e52682f0ba7cf"
         },
         "3": {
           "path": "rasters/tmaxmean_1991_2020_m03.webp",
-          "bytes": 48768,
-          "sha256": "45cc496f7244447aa1f2582c5a89d1b079b60c16f4dbc14cf3a79492cf607419"
+          "bytes": 47880,
+          "sha256": "9633351ec1f56296f7ae0b2257bd83bb914299ecba2d653fc9d394ce8c0aad1a"
         },
         "4": {
           "path": "rasters/tmaxmean_1991_2020_m04.webp",
-          "bytes": 39608,
-          "sha256": "67436864f86b61b595b61927a9fcb375860956e9a182bb5a7e6c97863d8474ef"
+          "bytes": 38650,
+          "sha256": "79f3eb1864eefafd771c5b78c6d39382f6733d2cc0d4866a0f23b002dbf796b9"
         },
         "5": {
           "path": "rasters/tmaxmean_1991_2020_m05.webp",
-          "bytes": 37602,
-          "sha256": "8f3f4a0c2da2a3e38a96de58ea0c056f59e02a5dc9d92368d3734288dd2efbb1"
+          "bytes": 36592,
+          "sha256": "1d2f8a9e5ee6978de8d185816eb167dfae6073438be842d11a53daec8382fc8a"
         },
         "6": {
           "path": "rasters/tmaxmean_1991_2020_m06.webp",
-          "bytes": 38412,
-          "sha256": "fd6a93949ae8e69deaa4838e11282a755d64fcc9f9248c88c15ff7fab3c11767"
+          "bytes": 37310,
+          "sha256": "d1389ca4ca75b1f8a185df68336e387d4f4be532ab74bf331cbca61e7f40f1c4"
         },
         "7": {
           "path": "rasters/tmaxmean_1991_2020_m07.webp",
-          "bytes": 41090,
-          "sha256": "d6095c48e8e37379738543d259899002f9aa85c92f4b1af0bb76c6da3aeda16a"
+          "bytes": 39716,
+          "sha256": "d849ba86f1529c15e35e3ffb276674f251e05d03349d27025caca020675c1069"
         },
         "8": {
           "path": "rasters/tmaxmean_1991_2020_m08.webp",
-          "bytes": 37870,
-          "sha256": "40d449c3a8fe240b91cd2da6a511ebe918a0019fc324e81fa3a8159190f34e38"
+          "bytes": 36848,
+          "sha256": "72e7a5633b95b0bb28c5e581f0d42bd2ee60220877c942b911cfb0e2635ab2d2"
         },
         "9": {
           "path": "rasters/tmaxmean_1991_2020_m09.webp",
-          "bytes": 44698,
-          "sha256": "b08b5f61e7793f526082d580b832335d552a6daec116411cc0de11743fff7d37"
+          "bytes": 44180,
+          "sha256": "e178fc25f896c0de9ab1bc3f4ed0ad5d0a0d120c9daac4e4e1bb8b28cbd7bda4"
         },
         "10": {
           "path": "rasters/tmaxmean_1991_2020_m10.webp",
-          "bytes": 49990,
-          "sha256": "1f4637199c862c530949ab477af08921480e5c3f3cde58d13beef41e601151b4"
+          "bytes": 49000,
+          "sha256": "15a5480accab45e8ee21879de7393f91f38b20ffc9f7f1726a8b00a0193b249b"
         },
         "11": {
           "path": "rasters/tmaxmean_1991_2020_m11.webp",
-          "bytes": 53196,
-          "sha256": "a60af2ccfd388c01db8753144a80aebc9c4531df57d541dbed5c4c597c3d5a21"
+          "bytes": 51964,
+          "sha256": "8ff798a14bd099fd0cf71a74ff822298640e2f53d6c3ebba42a5ff615f2cb65f"
         },
         "12": {
           "path": "rasters/tmaxmean_1991_2020_m12.webp",
-          "bytes": 59256,
-          "sha256": "28e73f78a491ec3b9cdcd47d0d14454ab80c43c0a57d1075e110590f8e2a8a81"
+          "bytes": 58028,
+          "sha256": "3198eab24e6afbe35819733dda10915f422675fea28f06798070aede93e978fd"
         },
         "13": {
           "path": "rasters/tmaxmean_1991_2020_m13.webp",
-          "bytes": 43476,
-          "sha256": "e0cdde885ad28910a6870980a0fe9434539db4876e481ddf70ecec702b1607fc"
+          "bytes": 42800,
+          "sha256": "6ac14da519dcba61c46b789b721d17e8022424e5e60bbd33cadf0eb0d44daff8"
         }
       },
       "1996_2025": {
         "1": {
           "path": "rasters/tmaxmean_1996_2025_m01.webp",
-          "bytes": 60410,
-          "sha256": "e697c8262f999fc587847d21f223becbe378d0e698b89d5f812ece2e5cd39e61"
+          "bytes": 59602,
+          "sha256": "e095257d4e8dfb714ba0c3028e001c655ba56ae791e6bed0ab004980ee0197be"
         },
         "2": {
           "path": "rasters/tmaxmean_1996_2025_m02.webp",
-          "bytes": 54390,
-          "sha256": "c3fd29a5bd29f6e211095e54bbdc01c733cc82fd2fc2599afe3654cd5352c1b0"
+          "bytes": 53322,
+          "sha256": "7128b848ecee1daa8c326f987d250ab9df048041a9b66588a2ece8db6cb6b13c"
         },
         "3": {
           "path": "rasters/tmaxmean_1996_2025_m03.webp",
-          "bytes": 47382,
-          "sha256": "051612b2d37e88bcfc3b8ea42b1e7a7a8ee736e44e54d99c30c033ecc9ff5031"
+          "bytes": 46330,
+          "sha256": "d81803d3c12df62377c46dcb1b7501938e625ef1fd11fb0277a68d0e0dd8193c"
         },
         "4": {
           "path": "rasters/tmaxmean_1996_2025_m04.webp",
-          "bytes": 38204,
-          "sha256": "d900d2600809c21457884ee19648175a77cddf8fb208b70be9f9b55235e34e8b"
+          "bytes": 37136,
+          "sha256": "8ad0eebe765af6dc519b212a8f585a028a6a22afa62c68405c8c421155f50a9e"
         },
         "5": {
           "path": "rasters/tmaxmean_1996_2025_m05.webp",
-          "bytes": 38090,
-          "sha256": "1102d562301283012de99c1fc386859ee2d6d5396589e3ad87647fe612c6417f"
+          "bytes": 37056,
+          "sha256": "68dd6c3eceb7dacb9e77d2272b50f2ae6400c651be9ba5b7190a0d2b7e2bc5b1"
         },
         "6": {
           "path": "rasters/tmaxmean_1996_2025_m06.webp",
-          "bytes": 38680,
-          "sha256": "418d23939babe6988046325ba5f83d30e6721d2325a43543967be5b37719677d"
+          "bytes": 37680,
+          "sha256": "53cfd19c2b0fc400e76701caafde7eee383fd6605480c7a194b53836955b5ed1"
         },
         "7": {
           "path": "rasters/tmaxmean_1996_2025_m07.webp",
-          "bytes": 41502,
-          "sha256": "ef00d91f077ef3dd6d771513e6ca2e491aee5c1bddec2793cac15561bdd1c3c3"
+          "bytes": 40304,
+          "sha256": "9ce8576904a990b4784442041831d9f0414491d2d8fc67e696b2fe1c7d0a2c38"
         },
         "8": {
           "path": "rasters/tmaxmean_1996_2025_m08.webp",
-          "bytes": 35994,
-          "sha256": "7e07d38f20e1b5ed1939ba6b2ae99d4eacf724fea7c406a9aa8aca6d9ee5e068"
+          "bytes": 35006,
+          "sha256": "bbad723e5ee4da2cb12b7a46c5ba64d6b66fb5703a9a14567a4713f97671ff20"
         },
         "9": {
           "path": "rasters/tmaxmean_1996_2025_m09.webp",
-          "bytes": 44126,
-          "sha256": "e340477f26d12b31e9fc14f2581ec70e5b5e88904d46362e0579d7d7edebde66"
+          "bytes": 43222,
+          "sha256": "e22c48ba8643e40433d31c794829495028925d09e0ef2b998c9515080ea30c9f"
         },
         "10": {
           "path": "rasters/tmaxmean_1996_2025_m10.webp",
-          "bytes": 49500,
-          "sha256": "a4b3e22a5f411c631ae0afda8d6bfd5c6b8872b8da8ba90b52d1f007f0bb1023"
+          "bytes": 48468,
+          "sha256": "031c715c44a4337de61f4d29bef41abb56e5340aac3ff24920340bd96b1fe34d"
         },
         "11": {
           "path": "rasters/tmaxmean_1996_2025_m11.webp",
-          "bytes": 53082,
-          "sha256": "efb01f34c46ca7a0398dbe3bfb637b4f24de071c76d5ae3a5f79e68f9fccd835"
+          "bytes": 51846,
+          "sha256": "49d316875f29ddba042befb46c6c3fafca5de7b4a76dfe9688671ea2ba10cce1"
         },
         "12": {
           "path": "rasters/tmaxmean_1996_2025_m12.webp",
-          "bytes": 59708,
-          "sha256": "ae206e9d0ec0debc8815e01737daf0c156bf380ae5680354a24e1c00cd69cb67"
+          "bytes": 58554,
+          "sha256": "58b53fbe9d578dacc05e85c9da3e013c192fad6bb822fc67e4b682831e29f34e"
         },
         "13": {
           "path": "rasters/tmaxmean_1996_2025_m13.webp",
-          "bytes": 42448,
-          "sha256": "4b11233da8f693f3bc6e6b2de9ff4534b8cbadbe8e285df88cdd1eda4f089430"
+          "bytes": 41740,
+          "sha256": "9759af5603f59aca4d033f9e4b5091664d236e2dc96979001996c164c61a17d4"
         }
       },
       "difference": {
         "1": {
           "path": "rasters/tmaxmean_difference_m01.webp",
-          "bytes": 28324,
-          "sha256": "57d7e0d24b9244600b8aca1234b5af3828ec708c02880ed3d63e0106cde88701"
+          "bytes": 27482,
+          "sha256": "83bdfa078b5535507ad7d3fb3051b38d64fd146c282167dd28e556f3c515856f"
         },
         "2": {
           "path": "rasters/tmaxmean_difference_m02.webp",
-          "bytes": 28434,
-          "sha256": "a507cc0692a9b1464471dcad59b35008251fb35402c901b259a89d34d4bfbc93"
+          "bytes": 27810,
+          "sha256": "12a86a528f4240bdde6b55cfacb506e50cd310d9ae7e7fb6fd7d35f76dbcba70"
         },
         "3": {
           "path": "rasters/tmaxmean_difference_m03.webp",
-          "bytes": 24330,
-          "sha256": "6646b1f0c9563983196b2f6bf4364c2d4ad654505f65083959be5fcc2cb33e02"
+          "bytes": 23548,
+          "sha256": "7bd389b6624cb52474fdf0a7b6406d20970068ea6fabe0a7175d172b82297202"
         },
         "4": {
           "path": "rasters/tmaxmean_difference_m04.webp",
-          "bytes": 29868,
-          "sha256": "b98f053eb993f4d8fb741762720356b3656c4b75d6d791c3b27aa0c2d0858ef4"
+          "bytes": 28950,
+          "sha256": "56854cca4f6f1a068e9da2d082b2c450fdca15eb1c60f8e1fb3e21be1bed2dd2"
         },
         "5": {
           "path": "rasters/tmaxmean_difference_m05.webp",
-          "bytes": 33430,
-          "sha256": "18833e589c518284c238d39beaa1f24e1b49777bcd9946b3728713c1fa49e45e"
+          "bytes": 32746,
+          "sha256": "7d168deb2923fed6404a0578d668d79dc4f60eed72601295b6048e79b2826186"
         },
         "6": {
           "path": "rasters/tmaxmean_difference_m06.webp",
-          "bytes": 24138,
-          "sha256": "580bd4b2b1c14aa6b5eff6cf51ec270d61a39348a6a21509759875cdd7e4917c"
+          "bytes": 23356,
+          "sha256": "40ad712d5c3d051faa4f470bab9833662e419275afd53e43d89cc1d6feb89fbb"
         },
         "7": {
           "path": "rasters/tmaxmean_difference_m07.webp",
-          "bytes": 27504,
-          "sha256": "741d670e27a4c642e05f3280e55dfdfe5a935c5ca4870a3940b454d8ca401999"
+          "bytes": 26186,
+          "sha256": "edab8f34bd4159b96d86c26914ab50df6b3af46ce0056685b72fabc0d81dffeb"
         },
         "8": {
           "path": "rasters/tmaxmean_difference_m08.webp",
-          "bytes": 27218,
-          "sha256": "86387265fef78739c511f23aecdbc7145d97d9f99ad3fdbb968d82bfb486f7d6"
+          "bytes": 26492,
+          "sha256": "dc15b815340fe5cc1b3739be45e53c3c3aefe54498386ebe4bd97842e20e2fbe"
         },
         "9": {
           "path": "rasters/tmaxmean_difference_m09.webp",
-          "bytes": 22026,
-          "sha256": "a92afb2fef43f2ab6b62b6788db594bf7718038199440aa46ff6326f0a33c48f"
+          "bytes": 21212,
+          "sha256": "c23eaabf65f178dd38fbea4acb3abc70287bd170a3970ab97a33d60718ae3063"
         },
         "10": {
           "path": "rasters/tmaxmean_difference_m10.webp",
-          "bytes": 22804,
-          "sha256": "1c0f6c64a2d32aba293ef03650f6bf6c948bf4587272ce24aafdae069a91dd03"
+          "bytes": 22118,
+          "sha256": "52663a6c279f63cd83d0d0a6ad774a029398f3284206b7c93a6a406ff4542c5f"
         },
         "11": {
           "path": "rasters/tmaxmean_difference_m11.webp",
-          "bytes": 29858,
-          "sha256": "f2f492092d31f458e53328fd5ddca3527acec7c1a9caa05d804e714216f12f76"
+          "bytes": 28970,
+          "sha256": "f9d76e4ee080ba754893cfe416ede7f24e3cb89c58fb844b81e8165809153334"
         },
         "12": {
           "path": "rasters/tmaxmean_difference_m12.webp",
-          "bytes": 29618,
-          "sha256": "382d99e775fc6fef8de0abf54a2ee2b9121e8ffb4b271c53013aa0e563ce3608"
+          "bytes": 28712,
+          "sha256": "e6cc00c1a35ed7d0f50b4c2ce5ee8447209170d18e6765d0c03805d8c5649c20"
         },
         "13": {
           "path": "rasters/tmaxmean_difference_m13.webp",
-          "bytes": 25360,
-          "sha256": "cb4ff31322b0dd15ac09790ff0572545c92d1a2cf922ef4002d94c63f58db512"
+          "bytes": 24520,
+          "sha256": "6fe2535db0faab36dcb0db6d808c5379d02b19f10d2433211f6d2731af539b2c"
         }
       }
     }

@@ -16,6 +16,27 @@ const BASES = {
 const FORECAST_COLORS = ["#315eb3", "#b59a31", "#d04a3e"];
 const FORECAST_NEUTRAL = "#646f78";
 const DEFAULT_FORECAST_CLASS_LABELS = ["低い", "平年並", "高い"];
+export const TEMPERATURE_ANOMALY_LEGEND = Object.freeze({
+  title: "期間平均気温の平年差",
+  unit: "℃",
+  breaks: [-5, -3, -2, -1, -0.5, 0.5, 1, 2, 3, 5],
+  colors: [
+    "#313695", "#4575b4", "#74add1", "#abd9e9", "#e0f3f8", "#f7f7f7",
+    "#fee090", "#fdae61", "#f46d43", "#d73027", "#a50026",
+  ],
+});
+
+function temperatureAnomalyColor(value) {
+  const index = TEMPERATURE_ANOMALY_LEGEND.breaks.findIndex((limit) => value <= limit);
+  return TEMPERATURE_ANOMALY_LEGEND.colors[
+    index < 0 ? TEMPERATURE_ANOMALY_LEGEND.colors.length - 1 : index
+  ];
+}
+
+function signedTemperature(value) {
+  const normalized = Math.abs(value) < 0.05 ? 0 : value;
+  return `${normalized > 0 ? "+" : ""}${normalized.toFixed(1)}℃`;
+}
 
 function dominantClass(probabilities) {
   const max = Math.max(...probabilities);
@@ -46,6 +67,24 @@ function seasonTooltipContent(featureName, forecast, classLabels) {
     document.createTextNode(
       `${classLabels[0]} ${probabilities[0]}%｜${classLabels[1]} ${probabilities[1]}%｜${classLabels[2]} ${probabilities[2]}%`,
     ),
+  );
+  return tooltip;
+}
+
+function recentTemperatureTooltip(point) {
+  const tooltip = document.createElement("span");
+  const heading = document.createElement("b");
+  heading.textContent = point.name;
+  tooltip.append(
+    heading,
+    document.createElement("br"),
+    document.createTextNode(`平年差 ${signedTemperature(point.anomaly)}`),
+    document.createElement("br"),
+    document.createTextNode(
+      `期間平均 ${point.observedMean.toFixed(1)}℃｜平年 ${point.normalMean.toFixed(1)}℃`,
+    ),
+    document.createElement("br"),
+    document.createTextNode(`有効 ${point.validDays}/${point.expectedDays}日`),
   );
   return tooltip;
 }
@@ -120,15 +159,22 @@ export class ClimateMap {
     }).setView(START_VIEW.center, START_VIEW.zoom);
     L.control.zoom({ position: "bottomleft" }).addTo(this.map);
     this.map.createPane("climatePane").style.zIndex = 330;
+    this.map.createPane("recentTemperaturePane").style.zIndex = 390;
     this.map.createPane("seasonPane").style.zIndex = 410;
     this.map.createPane("boundaryPane").style.zIndex = 430;
     this.map.createPane("selectionPane").style.zIndex = 450;
+    this.map.getPane("recentTemperaturePane").style.pointerEvents = "none";
+    this.map.getPane("boundaryPane").style.pointerEvents = "none";
+    this.map.getPane("selectionPane").style.pointerEvents = "none";
     this.boundaryRenderer = L.canvas({ pane: "boundaryPane", padding: 0.3 });
     this.seasonRenderer = L.canvas({ pane: "seasonPane", padding: 0.3 });
+    this.recentTemperatureRenderer = L.canvas({ pane: "recentTemperaturePane", padding: 0.3 });
     this.baseLayer = null;
     this.baseId = "pale";
     this.climateLayer = null;
     this.seasonLayer = null;
+    this.recentTemperatureLayer = null;
+    this.recentTemperatureMarkers = new Map();
     this.boundaryLayer = null;
     this.selectionLayer = null;
     this.setBase("pale");
@@ -189,6 +235,51 @@ export class ClimateMap {
 
   setClimateOpacity(opacity) {
     this.climateLayer?.setOpacity(opacity);
+    const image = this.climateLayer?.getElement();
+    if (image) image.setAttribute("aria-hidden", opacity <= 0 ? "true" : "false");
+  }
+
+  setRecentTemperature(points, visible = true) {
+    if (this.recentTemperatureLayer) this.map.removeLayer(this.recentTemperatureLayer);
+    this.recentTemperatureLayer = null;
+    this.recentTemperatureMarkers.clear();
+    this.map.getPane("recentTemperaturePane").style.pointerEvents = visible ? "auto" : "none";
+    this.map.getPane("seasonPane").style.pointerEvents = visible ? "none" : "auto";
+    if (!visible) return;
+    const markers = points.map((point) => {
+      const marker = L.circleMarker([point.lat, point.lon], {
+        pane: "recentTemperaturePane",
+        renderer: this.recentTemperatureRenderer,
+        bubblingMouseEvents: false,
+        radius: 6,
+        color: "#ffffff",
+        weight: 1.2,
+        opacity: 0.96,
+        fillColor: temperatureAnomalyColor(point.anomaly),
+        fillOpacity: 0.92,
+      });
+      marker.bindTooltip(recentTemperatureTooltip(point), {
+        sticky: true,
+        className: "recent-temperature-tooltip",
+        direction: "top",
+      });
+      marker.on("click", () => this.handlers.onRecentStationClick?.(point));
+      this.recentTemperatureMarkers.set(point.stationId, marker);
+      return marker;
+    });
+    this.recentTemperatureLayer = L.featureGroup(markers).addTo(this.map);
+  }
+
+  selectRecentStation(stationId, pan = false) {
+    this.recentTemperatureMarkers.forEach((marker, id) => {
+      marker.setRadius(id === stationId ? 9 : 6);
+      marker.setStyle({
+        color: id === stationId ? "#142f39" : "#ffffff",
+        weight: id === stationId ? 2.2 : 1.2,
+      });
+    });
+    const marker = this.recentTemperatureMarkers.get(stationId);
+    if (marker && pan) this.map.setView(marker.getLatLng(), Math.max(this.map.getZoom(), 7));
   }
 
   setSeasonOverlay(regions, term, visible, opacity = 0.28, classLabels = DEFAULT_FORECAST_CLASS_LABELS) {
@@ -305,7 +396,7 @@ export class ClimateMap {
     context.font = "700 12px -apple-system, BlinkMacSystemFont, sans-serif";
     subtitleLines.forEach((line, index) => context.fillText(line, 26, 62 + index * 14));
 
-    const detailLines = [
+    const detailLines = payload.detailLines || [
       payload.detail,
       payload.forecastDetail || "季節予報地域: 地点未選択",
       "気候平均：気象庁観測から独自算出・独自内挿",
