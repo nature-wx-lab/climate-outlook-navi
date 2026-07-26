@@ -290,7 +290,7 @@ export class ClimateDataStore {
     this.seasonLatest = seasonLatest;
     this.regions = regions;
     if (
-      recentTemperature.schema_version !== 1
+      recentTemperature.schema_version !== 2
       || recentTemperature.dataset_id !== recentTemperatureManifest.dataset_id
       || recentTemperature.stations?.length !== recentTemperatureManifest.station_count
       || recentTemperature.dates?.length !== recentTemperatureManifest.date_count
@@ -494,7 +494,9 @@ export class ClimateDataStore {
       }
       return [{
         stationId: station.station_id,
+        stationType: station.station_type,
         name: station.name,
+        prefecture: station.prefecture,
         lat: station.lat,
         lon: station.lon,
         elevationM: station.elevation_m,

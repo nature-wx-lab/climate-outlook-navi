@@ -620,7 +620,7 @@ def verify_climate(site_root: Path) -> dict[str, object]:
 def verify_recent_temperature(site_root: Path) -> dict[str, object]:
     root = site_root / "data" / "recent-temperature"
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-    require(manifest.get("schema_version") == 1, "recent-temperature manifest schema mismatch")
+    require(manifest.get("schema_version") == 2, "recent-temperature manifest schema mismatch")
     require(
         isinstance(manifest.get("dataset_id"), str)
         and re.fullmatch(r"recent-temperature-[0-9a-f]{16}", manifest["dataset_id"]) is not None,
@@ -638,7 +638,7 @@ def verify_recent_temperature(site_root: Path) -> dict[str, object]:
     require(actual_files == {"manifest.json", "latest.json"}, "recent-temperature file set mismatch")
 
     dataset = json.loads(latest_path.read_text(encoding="utf-8"))
-    require(dataset.get("schema_version") == 1, "recent-temperature dataset schema mismatch")
+    require(dataset.get("schema_version") == 2, "recent-temperature dataset schema mismatch")
     require(dataset.get("dataset_id") == manifest["dataset_id"], "recent-temperature dataset ID mismatch")
     dates = dataset.get("dates")
     require(isinstance(dates, list) and 93 <= len(dates) <= 180, "recent-temperature date count mismatch")
@@ -670,11 +670,22 @@ def verify_recent_temperature(site_root: Path) -> dict[str, object]:
     validation = dataset.get("validation")
     require(isinstance(validation, dict), "recent-temperature validation missing")
     require(validation.get("minimum_valid_ratio") == 0.8, "recent-temperature missing-data threshold mismatch")
+    require(
+        validation.get("official_population_station_count")
+        == manifest.get("official_population_station_count")
+        and validation.get("normal_population_station_count")
+        == manifest.get("population_station_count")
+        and re.fullmatch(r"[0-9a-f]{64}", validation.get("official_population_hash", ""))
+        and re.fullmatch(r"[0-9a-f]{64}", validation.get("normal_population_hash", "")),
+        "recent-temperature population validation mismatch",
+    )
     crosscheck = validation.get("latest_five_day_crosscheck")
     require(isinstance(crosscheck, dict), "recent-temperature five-day crosscheck missing")
     require(
         crosscheck.get("official_end_date") == dates[-1]
-        and crosscheck.get("compared_station_count", 0) >= 145
+        and crosscheck.get("official_value_count", 0) >= 850
+        and crosscheck.get("compared_station_count")
+        == crosscheck.get("official_value_count")
         and crosscheck.get("difference_over_tolerance_count") == 0
         and crosscheck.get("tolerance_c") == 0.1
         and crosscheck.get("maximum_absolute_difference_c", 99) <= 0.1,
@@ -684,11 +695,18 @@ def verify_recent_temperature(site_root: Path) -> dict[str, object]:
     stations = dataset.get("stations")
     require(
         isinstance(stations, list)
-        and 145 <= len(stations) <= 160
+        and 850 <= len(stations) <= 950
         and len(stations) == manifest.get("station_count"),
         "recent-temperature station count mismatch",
     )
+    require(
+        manifest.get("population_station_count", 0) >= len(stations)
+        and manifest.get("official_population_station_count", 0)
+        >= manifest.get("population_station_count", 0),
+        "recent-temperature population count mismatch",
+    )
     station_ids: set[str] = set()
+    station_type_counts = {"surface": 0, "amedas": 0}
     total_observations = 0
     for station in stations:
         require(isinstance(station, dict), "recent-temperature station entry invalid")
@@ -700,7 +718,21 @@ def verify_recent_temperature(site_root: Path) -> dict[str, object]:
             "recent-temperature station ID mismatch",
         )
         station_ids.add(station_id)
+        require(
+            station.get("station_type") in {"surface", "amedas"},
+            f"recent-temperature station type mismatch: {station_id}",
+        )
+        station_type_counts[station["station_type"]] += 1
+        require(
+            isinstance(station.get("obsdl_id"), str)
+            and re.fullmatch(r"[sa]\d{4,5}", station["obsdl_id"]) is not None,
+            f"recent-temperature OBS DL ID mismatch: {station_id}",
+        )
         require(isinstance(station.get("name"), str) and station["name"], "recent-temperature station name missing")
+        require(
+            isinstance(station.get("prefecture"), str) and station["prefecture"],
+            f"recent-temperature prefecture missing: {station_id}",
+        )
         require(20 <= station.get("lat", 0) <= 47, "recent-temperature station latitude mismatch")
         require(122 <= station.get("lon", 0) <= 154, "recent-temperature station longitude mismatch")
         for key in ("normal_tenths", "normal_5day_tenths"):
@@ -708,7 +740,11 @@ def verify_recent_temperature(site_root: Path) -> dict[str, object]:
             require(
                 isinstance(values, list)
                 and len(values) == 366
-                and all(isinstance(value, int) and -600 <= value <= 600 for value in values),
+                and all(
+                    value is None or isinstance(value, int) and -600 <= value <= 600
+                    for value in values
+                )
+                and sum(value is not None for value in values) / len(values) >= 0.8,
                 f"recent-temperature {key} mismatch: {station_id}",
             )
         observed = station.get("observed_tenths")
@@ -724,8 +760,14 @@ def verify_recent_temperature(site_root: Path) -> dict[str, object]:
         )
         total_observations += sum(value is not None for value in observed)
 
+    require(
+        station_type_counts["surface"] >= 145
+        and station_type_counts["amedas"] >= 700,
+        "recent-temperature maximum-density station mix mismatch",
+    )
+
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "dataset_id": manifest["dataset_id"],
         "station_count": len(stations),
         "date_count": len(dates),
@@ -733,6 +775,10 @@ def verify_recent_temperature(site_root: Path) -> dict[str, object]:
         "observation_start": dates[0],
         "observation_end": dates[-1],
         "latest_graph_center_date": manifest["latest_graph_center_date"],
+        "official_population_station_count": manifest["official_population_station_count"],
+        "normal_population_station_count": manifest["population_station_count"],
+        "surface_station_count": station_type_counts["surface"],
+        "amedas_station_count": station_type_counts["amedas"],
         "latest_five_day_compared": crosscheck["compared_station_count"],
         "latest_five_day_maximum_difference_c": crosscheck["maximum_absolute_difference_c"],
         "checksums_ok": True,
@@ -1034,8 +1080,15 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require("recentTemperaturePeriod(start, end)" in (site_root / "data.js").read_text(encoding="utf-8"), "recent period calculation is missing")
     require("normal_5day_tenths" in (site_root / "data.js").read_text(encoding="utf-8"), "official five-day normal routing is missing")
     require("setRecentTemperature(points, visible = true)" in map_script, "recent station map layer is missing")
+    require(
+        "CanvasSquareMarker" in map_script
+        and "radius: 3" in map_script
+        and "stationType === \"amedas\"" in map_script,
+        "maximum-density square station marker contract is missing",
+    )
     require("recentTemperatureTooltip(point)" in map_script, "recent station tooltip is missing")
     require("地点間は補間していません" in index, "recent point-map non-interpolation note is missing")
+    require("アメダス" in index, "recent AMeDAS source explanation is missing")
     return {
         "text_files_scanned": scanned,
         "blocked_hits": len(hits),
@@ -1057,6 +1110,7 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "recent_temperature_period_map": True,
         "recent_temperature_five_day_slider": True,
         "recent_temperature_point_only": True,
+        "recent_temperature_maximum_density_square_markers": True,
     }
 
 

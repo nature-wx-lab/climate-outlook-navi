@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f7883'/%3E%3Cpath d='M17 44V20h7l16 15V20h7v24h-7L24 29v15z' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="./styles.css?v=20260726-recent-temperature1">
+  <link rel="stylesheet" href="./styles.css?v=20260726-recent-temperature4">
 </head>
 <body>
   <header class="topbar">
@@ -156,7 +156,7 @@
       <section id="recentDetailSection" class="recent-detail" hidden>
         <h2>観測地点の期間平年差</h2>
         <span id="recentStationId" class="eyebrow">地点を選択</span>
-        <strong id="recentStationName">地図の丸に触れると値を確認できます</strong>
+        <strong id="recentStationName">地図の四角に触れると値を確認できます</strong>
         <strong id="recentAnomalyValue" class="primary-value">--</strong>
         <p id="recentPeriodLabel">期間を選択してください</p>
         <div class="comparison-grid recent-comparison">
@@ -229,17 +229,17 @@
         <ol>
           <li>色は各観測地点の期間平均気温平年差</li>
           <li>5日は前後2日を含む中心日表示</li>
-          <li>丸の間は補間せず、地点値として読む</li>
+          <li>四角の間は補間せず、地点値として読む</li>
         </ol>
       </section>
     </aside>
   </main>
 
   <footer>
-    気候平均：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。最近の気温平年差：<a href="https://www.data.jma.go.jp/stats/mdrr/normal/index.html" target="_blank" rel="noopener noreferrer">気象庁2020年平年値</a>と日平均気温から独自集計した観測地点値。地点間は補間していません。
+    気候平均：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。最近の気温平年差：<a href="https://www.data.jma.go.jp/stats/mdrr/normal/index.html" target="_blank" rel="noopener noreferrer">気象庁2020年平年値</a>と日平均気温から独自集計した気象台等・アメダスの観測地点値。地点間は補間していません。
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260726-recent-temperature1"></script>
+  <script type="module" src="./app.js?v=20260726-recent-temperature2"></script>
 </body>
 </html>

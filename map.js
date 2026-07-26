@@ -26,6 +26,22 @@ export const TEMPERATURE_ANOMALY_LEGEND = Object.freeze({
   ],
 });
 
+const CanvasSquareMarker = L.CircleMarker.extend({
+  _updatePath() {
+    if (!this._renderer?._drawing || this._empty()) return;
+    const radius = Math.max(Math.round(this._radius), 1);
+    const context = this._renderer._ctx;
+    context.beginPath();
+    context.rect(
+      this._point.x - radius,
+      this._point.y - radius,
+      radius * 2,
+      radius * 2,
+    );
+    this._renderer._fillStroke(context, this);
+  },
+});
+
 function temperatureAnomalyColor(value) {
   const index = TEMPERATURE_ANOMALY_LEGEND.breaks.findIndex((limit) => value <= limit);
   return TEMPERATURE_ANOMALY_LEGEND.colors[
@@ -77,6 +93,10 @@ function recentTemperatureTooltip(point) {
   heading.textContent = point.name;
   tooltip.append(
     heading,
+    document.createElement("br"),
+    document.createTextNode(
+      `${point.prefecture}｜${point.stationType === "amedas" ? "アメダス" : "気象台等"}`,
+    ),
     document.createElement("br"),
     document.createTextNode(`平年差 ${signedTemperature(point.anomaly)}`),
     document.createElement("br"),
@@ -247,16 +267,16 @@ export class ClimateMap {
     this.map.getPane("seasonPane").style.pointerEvents = visible ? "none" : "auto";
     if (!visible) return;
     const markers = points.map((point) => {
-      const marker = L.circleMarker([point.lat, point.lon], {
+      const marker = new CanvasSquareMarker([point.lat, point.lon], {
         pane: "recentTemperaturePane",
         renderer: this.recentTemperatureRenderer,
         bubblingMouseEvents: false,
-        radius: 6,
+        radius: 3,
         color: "#ffffff",
-        weight: 1.2,
+        weight: 1,
         opacity: 0.96,
         fillColor: temperatureAnomalyColor(point.anomaly),
-        fillOpacity: 0.92,
+        fillOpacity: 0.96,
       });
       marker.bindTooltip(recentTemperatureTooltip(point), {
         sticky: true,
@@ -272,10 +292,10 @@ export class ClimateMap {
 
   selectRecentStation(stationId, pan = false) {
     this.recentTemperatureMarkers.forEach((marker, id) => {
-      marker.setRadius(id === stationId ? 9 : 6);
+      marker.setRadius(id === stationId ? 5 : 3);
       marker.setStyle({
         color: id === stationId ? "#142f39" : "#ffffff",
-        weight: id === stationId ? 2.2 : 1.2,
+        weight: id === stationId ? 2 : 1,
       });
     });
     const marker = this.recentTemperatureMarkers.get(stationId);

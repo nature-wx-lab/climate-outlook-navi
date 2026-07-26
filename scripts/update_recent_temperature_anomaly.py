@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Build the recent nationwide temperature-anomaly point dataset.
+"""Build the maximum-density nationwide temperature-anomaly point dataset.
 
-The public derivative combines two official JMA sources:
+The public derivative combines official JMA sources:
 
-- 1991-2020 daily normals from the surface-station normal archive.
-- Daily mean temperatures from the observation download service for bootstrap,
-  then the daily nationwide surface-station table for incremental updates.
+- the current nationwide temperature table for the active station population;
+- the AMeDAS station index plus daily and daily-five-day 1991-2020 normals;
+- batched daily mean temperatures from the observation download service.
 
-Only compact station metadata, daily normals, and recent observations are
-published. Source archives and responses remain transient.
+The population includes both surface observatories and AMeDAS temperature
+stations. Only compact station metadata, normals, and recent observations are
+published. Source archives and download responses remain transient.
 """
 
 from __future__ import annotations
@@ -44,11 +45,19 @@ DATA_ROOT = ROOT / "data" / "recent-temperature"
 MANIFEST_PATH = DATA_ROOT / "manifest.json"
 LATEST_PATH = DATA_ROOT / "latest.json"
 
-NORMAL_ARCHIVE_URL = "https://www.data.jma.go.jp/stats/mdrr/normal/2020/data/normal_surface.zip"
+NORMAL_DAILY_ARCHIVE_URL = (
+    "https://www.data.jma.go.jp/stats/mdrr/normal/2020/data/normal_amedas_daily.zip"
+)
+NORMAL_FIVE_DAY_ARCHIVE_URL = (
+    "https://www.data.jma.go.jp/stats/mdrr/normal/2020/data/normal_amedas_daily_5day.zip"
+)
+STATION_INDEX_ARCHIVE_URL = (
+    "https://www.data.jma.go.jp/stats/mdrr/normal/2020/data/amedas_station_index.zip"
+)
 NORMAL_INDEX_URL = "https://www.data.jma.go.jp/stats/mdrr/normal/index.html"
 OBSDL_INDEX_URL = "https://www.data.jma.go.jp/risk/obsdl/index.php"
+OBSDL_STATION_URL = "https://www.data.jma.go.jp/risk/obsdl/top/station"
 OBSDL_TABLE_URL = "https://www.data.jma.go.jp/risk/obsdl/show/table"
-SYNOPDAY_URL = "https://www.data.jma.go.jp/stats/mdrr/synopday/data{page}.html"
 LATEST_PERIOD_TABLE_URL = "https://www.data.jma.go.jp/stats/mdrr/tenkou/alltable/tem00.csv"
 
 USER_AGENT = "NatureWxLab Climate Outlook Navi public dataset builder"
@@ -60,22 +69,29 @@ NORMAL_DAYS = tuple(
     for day in range(1, calendar.monthrange(2020, month)[1] + 1)
 )
 NORMAL_DAY_INDEX = {value: index for index, value in enumerate(NORMAL_DAYS)}
-EXCLUDED_STATION_IDS = {
-    "47639": "富士山（気象庁の天候の状況から除外）",
-    "47821": "阿蘇山（観測終了）",
-    "47991": "南鳥島（気象庁の天候の状況から除外）",
-    "89532": "昭和（南極、気象庁の天候の状況から除外）",
-}
 ACCEPTED_QUALITY_CODES = {5, 8}
 MINIMUM_VALID_RATIO = 0.8
-MINIMUM_ACTIVE_STATIONS = 145
+MINIMUM_ACTIVE_STATIONS = 850
+MINIMUM_POPULATION_RATIO = 0.95
 MAX_INCREMENTAL_GAP_DAYS = 29
+OBSERVATION_BATCH_SIZE = 50
+
+
+@dataclass(frozen=True)
+class PopulationStation:
+    station_id: str
+    name: str
+    prefecture: str
+    international_id: str
 
 
 @dataclass(frozen=True)
 class StationNormal:
     station_id: str
+    obsdl_id: str
+    station_type: str
     name: str
+    prefecture: str
     latitude: float
     longitude: float
     elevation_m: float
@@ -83,37 +99,68 @@ class StationNormal:
     normal_5day_tenths: tuple[int | None, ...]
 
 
-class TableParser(HTMLParser):
-    """Extract text cells from HTML tables without third-party HTML parsers."""
+class ObsdlStationParser(HTMLParser):
+    """Read active station identifiers and coordinates from an OBS DL panel."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
-        self.rows: list[list[str]] = []
-        self._row: list[str] | None = None
-        self._cell: list[str] | None = None
+        self.stations: dict[str, dict[str, Any]] = {}
+        self._current: dict[str, Any] | None = None
+        self._depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag == "tr":
-            self._row = []
-        elif tag in {"td", "th"} and self._row is not None:
-            self._cell = []
-
-    def handle_data(self, data: str) -> None:
-        if self._cell is not None:
-            self._cell.append(data)
+        attributes = {key: value or "" for key, value in attrs}
+        if tag == "div":
+            if self._current is not None:
+                self._depth += 1
+                return
+            classes = set(attributes.get("class", "").split())
+            if "station" in classes:
+                self._current = {
+                    "classes": classes,
+                    "title": attributes.get("title", ""),
+                    "values": {},
+                }
+                self._depth = 1
+            return
+        if tag == "input" and self._current is not None:
+            name = attributes.get("name")
+            if name:
+                self._current["values"][name] = attributes.get("value", "")
 
     def handle_endtag(self, tag: str) -> None:
-        if tag in {"td", "th"} and self._cell is not None and self._row is not None:
-            self._row.append(normalize_text("".join(self._cell)))
-            self._cell = None
-        elif tag == "tr" and self._row is not None:
-            if self._row:
-                self.rows.append(self._row)
-            self._row = None
+        if tag != "div" or self._current is None:
+            return
+        self._depth -= 1
+        if self._depth:
+            return
+        classes = self._current["classes"]
+        values = self._current["values"]
+        station_id = values.get("stid", "")
+        if station_id and "owata" not in classes:
+            latitude, longitude = coordinates_from_title(self._current["title"])
+            self.stations.setdefault(station_id, {
+                "obsdl_id": station_id,
+                "name": normalize_text(values.get("stname", "")),
+                "latitude": latitude,
+                "longitude": longitude,
+            })
+        self._current = None
 
 
 def normalize_text(value: str) -> str:
     return re.sub(r"\s+", "", value.replace("\u3000", " ")).strip()
+
+
+def coordinates_from_title(value: str) -> tuple[float | None, float | None]:
+    latitude = re.search(r"北緯：(\d+)度([\d.]+)分", value)
+    longitude = re.search(r"東経：(\d+)度([\d.]+)分", value)
+    if not latitude or not longitude:
+        return None, None
+    return (
+        float(latitude.group(1)) + float(latitude.group(2)) / 60,
+        float(longitude.group(1)) + float(longitude.group(2)) / 60,
+    )
 
 
 def ssl_context() -> ssl.SSLContext:
@@ -150,33 +197,197 @@ def as_tenths(value: str) -> int | None:
     if not match:
         return None
     try:
-        return int((Decimal(match.group(0)) * 10).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        return int(
+            (Decimal(match.group(0)) * 10).quantize(
+                Decimal("1"),
+                rounding=ROUND_HALF_UP,
+            )
+        )
     except InvalidOperation:
         return None
 
 
 def iso_dates(start: date, end: date) -> list[str]:
-    return [(start + timedelta(days=offset)).isoformat() for offset in range((end - start).days + 1)]
+    return [
+        (start + timedelta(days=offset)).isoformat()
+        for offset in range((end - start).days + 1)
+    ]
 
 
-def station_index(archive: zipfile.ZipFile) -> list[dict[str, str]]:
-    raw = archive.read("normal_surface/surface_station_index.csv").decode("cp932")
-    rows = list(csv.reader(io.StringIO(raw)))
-    stations: list[dict[str, str]] = []
+def population_hash(population: list[PopulationStation]) -> str:
+    raw = "\n".join(station.station_id for station in population).encode("ascii")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def parse_latest_period_table(
+    raw: bytes,
+) -> tuple[date, list[PopulationStation], dict[str, Decimal]]:
+    rows = csv.DictReader(io.StringIO(raw.decode("cp932")))
+    end_date: date | None = None
+    population: list[PopulationStation] = []
+    values: dict[str, Decimal] = {}
+    for row in rows:
+        station_id = row["観測所番号"].strip()
+        if re.fullmatch(r"\d{5}", station_id) is None:
+            continue
+        current_end = date(
+            int(row["終了日（年）"]),
+            int(row["終了日（月）"]),
+            int(row["終了日（日）"]),
+        )
+        end_date = current_end if end_date is None else end_date
+        if current_end != end_date:
+            raise ValueError("official temperature table has mixed end dates")
+        name = normalize_text(row["地点"].split("（", 1)[0])
+        population.append(PopulationStation(
+            station_id=station_id,
+            name=name,
+            prefecture=normalize_text(row["都道府県"]),
+            international_id=row["国際地点番号"].strip(),
+        ))
+        anomaly = row["前5日間平均気温平年差（℃）"].strip()
+        if anomaly not in {"", "///"}:
+            values[station_id] = Decimal(anomaly.replace("+", ""))
+    if end_date is None or len(population) < MINIMUM_ACTIVE_STATIONS:
+        raise ValueError("official temperature table population is too small")
+    station_ids = [station.station_id for station in population]
+    if len(station_ids) != len(set(station_ids)):
+        raise ValueError("official temperature table contains duplicate station IDs")
+    return end_date, population, values
+
+
+def station_index(raw: bytes) -> dict[str, dict[str, str]]:
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        member = next(
+            (name for name in archive.namelist() if name.endswith("amedas_station_index.csv")),
+            None,
+        )
+        if member is None:
+            raise ValueError("AMeDAS station index CSV is missing")
+        rows = list(csv.reader(io.StringIO(archive.read(member).decode("cp932"))))
+    stations: dict[str, dict[str, str]] = {}
     for row in rows[2:]:
-        if len(row) < 9:
+        if len(row) < 15 or row[12].strip() != "1":
             continue
         station_id = row[0].strip()
-        if station_id in EXCLUDED_STATION_IDS:
-            continue
-        stations.append({
+        stations[station_id] = {
             "station_id": station_id,
-            "name": row[1].strip().replace("\u3000", ""),
+            "name": normalize_text(row[1]),
             "latitude": str(float(row[4]) + float(row[5]) / 60),
             "longitude": str(float(row[6]) + float(row[7]) / 60),
             "elevation_m": row[8].strip(),
-        })
+        }
+    if len(stations) < MINIMUM_ACTIVE_STATIONS:
+        raise ValueError(f"AMeDAS temperature-normal index is too small: {len(stations)}")
     return stations
+
+
+def obsdl_opener() -> urllib.request.OpenerDirector:
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(CookieJar()),
+        urllib.request.HTTPSHandler(context=ssl_context()),
+    )
+    request_bytes(OBSDL_INDEX_URL, opener=opener, timeout=30)
+    return opener
+
+
+def fetch_obsdl_station_panels(
+    opener: urllib.request.OpenerDirector,
+    prefecture_codes: set[str],
+) -> dict[str, list[dict[str, Any]]]:
+    by_prefecture: dict[str, list[dict[str, Any]]] = {}
+    for index, code in enumerate(sorted(prefecture_codes), 1):
+        raw = request_bytes(
+            OBSDL_STATION_URL,
+            opener=opener,
+            data=urllib.parse.urlencode({"pd": code}).encode("ascii"),
+            timeout=60,
+        )
+        parser = ObsdlStationParser()
+        parser.feed(raw.decode("utf-8", errors="replace"))
+        by_prefecture[code] = list(parser.stations.values())
+        print(
+            f"[station-panel {index:02d}/{len(prefecture_codes):02d}] "
+            f"{code} active={len(parser.stations)}",
+            flush=True,
+        )
+    return by_prefecture
+
+
+def resolve_obsdl_ids(
+    population: list[PopulationStation],
+    metadata: dict[str, dict[str, str]],
+    opener: urllib.request.OpenerDirector,
+) -> dict[str, str]:
+    amedas = [station for station in population if not station.international_id]
+    panels = fetch_obsdl_station_panels(
+        opener,
+        {station.station_id[:2] for station in amedas},
+    )
+    all_panel_stations = [
+        candidate
+        for candidates in panels.values()
+        for candidate in candidates
+    ]
+    resolved: dict[str, str] = {}
+    unresolved: list[str] = []
+    for station in population:
+        if station.international_id:
+            resolved[station.station_id] = f"s{station.international_id}"
+            continue
+        reference = metadata.get(station.station_id)
+        if reference is None:
+            unresolved.append(f"{station.station_id}:{station.name}:normal-index")
+            continue
+        names = {station.name, normalize_text(reference["name"])}
+        candidates = [
+            candidate
+            for candidate in panels.get(station.station_id[:2], [])
+            if candidate["obsdl_id"].startswith("a") and candidate["name"] in names
+        ]
+        if not candidates:
+            candidates = [
+                candidate
+                for candidate in all_panel_stations
+                if candidate["obsdl_id"].startswith("a")
+                and candidate["name"] in names
+            ]
+        if not candidates:
+            unresolved.append(f"{station.station_id}:{station.name}:obsdl")
+            continue
+        latitude = float(reference["latitude"])
+        longitude = float(reference["longitude"])
+        candidates.sort(key=lambda candidate: (
+            (candidate["latitude"] - latitude) ** 2
+            + (candidate["longitude"] - longitude) ** 2
+            if candidate["latitude"] is not None and candidate["longitude"] is not None
+            else 999
+        ))
+        candidate = candidates[0]
+        if (
+            candidate["latitude"] is not None
+            and candidate["longitude"] is not None
+            and (
+                abs(candidate["latitude"] - latitude) > 0.06
+                or abs(candidate["longitude"] - longitude) > 0.06
+            )
+        ):
+            unresolved.append(f"{station.station_id}:{station.name}:coordinates")
+            continue
+        resolved[station.station_id] = candidate["obsdl_id"]
+    if unresolved:
+        raise ValueError(f"unresolved OBS DL stations ({len(unresolved)}): {unresolved[:20]}")
+    return resolved
+
+
+def archive_members(archive: zipfile.ZipFile, stem: str) -> dict[str, str]:
+    pattern = re.compile(rf"{re.escape(stem)}_(\d{{5}})\.csv$")
+    members: dict[str, str] = {}
+    for member in archive.namelist():
+        match = pattern.search(member)
+        if match:
+            members[match.group(1)] = member
+    return members
 
 
 def parse_normal_series(
@@ -203,65 +414,127 @@ def parse_normal_series(
             quality = int(row[quality_index].strip() or "0")
             if quality <= 0:
                 continue
-            values[NORMAL_DAY_INDEX[f"{month:02d}-{day:02d}"]] = int(row[value_index].strip())
-    if any(value is None for value in values):
-        missing = sum(value is None for value in values)
-        raise ValueError(f"temperature normal is incomplete for {station_id}: {member} ({missing} days)")
+            values[NORMAL_DAY_INDEX[f"{month:02d}-{day:02d}"]] = int(
+                row[value_index].strip()
+            )
+    valid = sum(value is not None for value in values)
+    if valid / len(values) < MINIMUM_VALID_RATIO:
+        missing = len(values) - valid
+        raise ValueError(
+            f"temperature normal coverage is too small for {station_id}: {member} "
+            f"({missing} days)"
+        )
     return tuple(values)
 
 
-def parse_station_normal(archive: zipfile.ZipFile, metadata: dict[str, str]) -> StationNormal:
-    station_id = metadata["station_id"]
-    daily = parse_normal_series(
-        archive,
-        f"normal_surface/daily/nml_sfc_d_{station_id}.csv",
-        station_id,
-        "15",
+def load_normals(
+    population: list[PopulationStation],
+    opener: urllib.request.OpenerDirector,
+    station_index_archive: Path | None,
+    normal_daily_archive: Path | None,
+    normal_five_day_archive: Path | None,
+) -> list[StationNormal]:
+    index_raw = (
+        station_index_archive.read_bytes()
+        if station_index_archive
+        else request_bytes(STATION_INDEX_ARCHIVE_URL)
     )
-    five_day = parse_normal_series(
-        archive,
-        f"normal_surface/daily_5day/nml_sfc_d5d_{station_id}.csv",
-        station_id,
-        "17",
+    metadata = station_index(index_raw)
+    eligible_population = [
+        station for station in population if station.station_id in metadata
+    ]
+    missing_metadata = [
+        station.station_id for station in population if station.station_id not in metadata
+    ]
+    if len(eligible_population) < MINIMUM_ACTIVE_STATIONS:
+        raise ValueError(
+            f"too few current stations have 1991-2020 normals: "
+            f"{len(eligible_population)}/{len(population)}"
+        )
+    if missing_metadata:
+        print(
+            f"[normal-population] eligible={len(eligible_population)} "
+            f"without-normal={len(missing_metadata)} ids={missing_metadata}",
+            flush=True,
+        )
+    obsdl_ids = resolve_obsdl_ids(eligible_population, metadata, opener)
+    daily_raw = (
+        normal_daily_archive.read_bytes()
+        if normal_daily_archive
+        else request_bytes(NORMAL_DAILY_ARCHIVE_URL)
     )
-    return StationNormal(
-        station_id=station_id,
-        name=metadata["name"],
-        latitude=round(float(metadata["latitude"]), 5),
-        longitude=round(float(metadata["longitude"]), 5),
-        elevation_m=round(float(metadata["elevation_m"]), 1),
-        normal_tenths=daily,
-        normal_5day_tenths=five_day,
+    five_day_raw = (
+        normal_five_day_archive.read_bytes()
+        if normal_five_day_archive
+        else request_bytes(NORMAL_FIVE_DAY_ARCHIVE_URL)
     )
-
-
-def load_normals(archive_path: Path | None) -> list[StationNormal]:
-    raw = archive_path.read_bytes() if archive_path else request_bytes(NORMAL_ARCHIVE_URL)
-    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
-        normals = [parse_station_normal(archive, item) for item in station_index(archive)]
+    normals: list[StationNormal] = []
+    incomplete_normals: list[str] = []
+    with (
+        zipfile.ZipFile(io.BytesIO(daily_raw)) as daily_archive,
+        zipfile.ZipFile(io.BytesIO(five_day_raw)) as five_day_archive,
+    ):
+        daily_members = archive_members(daily_archive, "nml_amd_d")
+        five_day_members = archive_members(five_day_archive, "nml_amd_d5d")
+        for station in eligible_population:
+            station_id = station.station_id
+            if station_id not in daily_members or station_id not in five_day_members:
+                incomplete_normals.append(station_id)
+                continue
+            item = metadata[station_id]
+            obsdl_id = obsdl_ids[station_id]
+            try:
+                daily = parse_normal_series(
+                    daily_archive,
+                    daily_members[station_id],
+                    station_id,
+                    "25",
+                )
+                five_day = parse_normal_series(
+                    five_day_archive,
+                    five_day_members[station_id],
+                    station_id,
+                    "27",
+                )
+            except ValueError:
+                incomplete_normals.append(station_id)
+                continue
+            normals.append(StationNormal(
+                station_id=station_id,
+                obsdl_id=obsdl_id,
+                station_type="surface" if obsdl_id.startswith("s") else "amedas",
+                name=station.name,
+                prefecture=station.prefecture,
+                latitude=round(float(item["latitude"]), 5),
+                longitude=round(float(item["longitude"]), 5),
+                elevation_m=round(float(item["elevation_m"]), 1),
+                normal_tenths=daily,
+                normal_5day_tenths=five_day,
+            ))
+    if incomplete_normals:
+        print(
+            f"[normal-series] complete={len(normals)} "
+            f"incomplete={len(incomplete_normals)} ids={incomplete_normals}",
+            flush=True,
+        )
     if len(normals) < MINIMUM_ACTIVE_STATIONS:
-        raise ValueError(f"surface-station normal coverage is too small: {len(normals)}")
+        raise ValueError(f"complete normal population is too small: {len(normals)}")
     return normals
 
 
-def obsdl_opener() -> urllib.request.OpenerDirector:
-    opener = urllib.request.build_opener(
-        urllib.request.HTTPCookieProcessor(CookieJar()),
-        urllib.request.HTTPSHandler(context=ssl_context()),
-    )
-    request_bytes(OBSDL_INDEX_URL, opener=opener, timeout=30)
-    return opener
-
-
-def observation_payload(station_id: str, start: date, end: date) -> bytes:
+def observation_payload(obsdl_ids: list[str], start: date, end: date) -> bytes:
     values = {
-        "stationNumList": json.dumps([f"s{station_id}"], ensure_ascii=False),
+        "stationNumList": json.dumps(obsdl_ids, ensure_ascii=False),
         "aggrgPeriod": "1",
         "elementNumList": json.dumps([[OBSERVATION_ELEMENT, ""]], ensure_ascii=False),
         "interAnnualType": "1",
         "ymdList": json.dumps([
-            str(start.year), str(end.year), str(start.month), str(end.month),
-            str(start.day), str(end.day),
+            str(start.year),
+            str(end.year),
+            str(start.month),
+            str(end.month),
+            str(start.day),
+            str(end.day),
         ]),
         "optionNumList": "[]",
         "downloadFlag": "true",
@@ -278,61 +551,136 @@ def observation_payload(station_id: str, start: date, end: date) -> bytes:
     return urllib.parse.urlencode(values).encode("ascii")
 
 
-def parse_obsdl(raw: bytes, expected_dates: list[str]) -> list[int | None]:
-    rows = csv.reader(io.StringIO(raw.decode("cp932", errors="replace")))
-    values: dict[str, int | None] = {}
-    for row in rows:
-        if len(row) < 3 or re.fullmatch(r"\d{4}/\d{1,2}/\d{1,2}", row[0].strip()) is None:
+def parse_obsdl(
+    raw: bytes,
+    obsdl_ids: list[str],
+    expected_dates: list[str],
+) -> dict[str, list[int | None]]:
+    values: dict[str, dict[str, int | None]] = {
+        station_id: {} for station_id in obsdl_ids
+    }
+    for row in csv.reader(io.StringIO(raw.decode("cp932", errors="replace"))):
+        if (
+            not row
+            or re.fullmatch(r"\d{4}/\d{1,2}/\d{1,2}", row[0].strip()) is None
+        ):
             continue
         year, month, day = (int(value) for value in row[0].split("/"))
         current = date(year, month, day).isoformat()
-        quality = int(row[2].strip() or "0")
-        values[current] = as_tenths(row[1]) if quality in ACCEPTED_QUALITY_CODES else None
-    return [values.get(current) for current in expected_dates]
+        for index, station_id in enumerate(obsdl_ids):
+            value_index = 1 + index * 3
+            quality_index = value_index + 1
+            if quality_index >= len(row):
+                raise ValueError(
+                    f"OBS DL column count mismatch: {len(row)} for {len(obsdl_ids)} stations"
+                )
+            quality = int(row[quality_index].strip() or "0")
+            values[station_id][current] = (
+                as_tenths(row[value_index])
+                if quality in ACCEPTED_QUALITY_CODES
+                else None
+            )
+    return {
+        station_id: [values[station_id].get(current) for current in expected_dates]
+        for station_id in obsdl_ids
+    }
 
 
-def fetch_station_observations(
+def fetch_observation_batch(
     opener: urllib.request.OpenerDirector,
-    station: StationNormal,
+    obsdl_ids: list[str],
     start: date,
     end: date,
     expected_dates: list[str],
-) -> list[int | None]:
+) -> dict[str, list[int | None]]:
     error: Exception | None = None
     for attempt in range(3):
         try:
             raw = request_bytes(
                 OBSDL_TABLE_URL,
                 opener=opener,
-                data=observation_payload(station.station_id, start, end),
+                data=observation_payload(obsdl_ids, start, end),
             )
-            values = parse_obsdl(raw, expected_dates)
-            if len(values) != len(expected_dates):
-                raise ValueError("observation date count mismatch")
-            return values
+            return parse_obsdl(raw, obsdl_ids, expected_dates)
         except Exception as exc:  # network retry boundary
             error = exc
             if attempt < 2:
                 time.sleep(2 * (attempt + 1))
-    raise RuntimeError(f"failed to fetch observations for {station.station_id}: {error}")
+    if len(obsdl_ids) > 1:
+        middle = len(obsdl_ids) // 2
+        return {
+            **fetch_observation_batch(
+                opener,
+                obsdl_ids[:middle],
+                start,
+                end,
+                expected_dates,
+            ),
+            **fetch_observation_batch(
+                opener,
+                obsdl_ids[middle:],
+                start,
+                end,
+                expected_dates,
+            ),
+        }
+    raise RuntimeError(f"failed to fetch observations for {obsdl_ids[0]}: {error}")
+
+
+def fetch_observations(
+    opener: urllib.request.OpenerDirector,
+    obsdl_ids: list[str],
+    start: date,
+    end: date,
+    request_delay: float,
+) -> dict[str, list[int | None]]:
+    dates = iso_dates(start, end)
+    batches = [
+        obsdl_ids[index:index + OBSERVATION_BATCH_SIZE]
+        for index in range(0, len(obsdl_ids), OBSERVATION_BATCH_SIZE)
+    ]
+    observations: dict[str, list[int | None]] = {}
+    for index, batch in enumerate(batches, 1):
+        observations.update(
+            fetch_observation_batch(opener, batch, start, end, dates)
+        )
+        print(
+            f"[observation-batch {index:02d}/{len(batches):02d}] "
+            f"stations={len(batch)} dates={len(dates)}",
+            flush=True,
+        )
+        if request_delay > 0 and index < len(batches):
+            time.sleep(request_delay)
+    return observations
 
 
 def bootstrap_dataset(
     normals: list[StationNormal],
+    population: list[PopulationStation],
     start: date,
     end: date,
     request_delay: float,
+    opener: urllib.request.OpenerDirector,
 ) -> dict[str, Any]:
     dates = iso_dates(start, end)
-    opener = obsdl_opener()
+    observations = fetch_observations(
+        opener,
+        [station.obsdl_id for station in normals],
+        start,
+        end,
+        request_delay,
+    )
     stations: list[dict[str, Any]] = []
-    for index, station in enumerate(normals, 1):
-        observed = fetch_station_observations(opener, station, start, end, dates)
+    for station in normals:
+        observed = observations[station.obsdl_id]
         valid = sum(value is not None for value in observed)
         if valid / len(dates) >= MINIMUM_VALID_RATIO:
             stations.append({
                 "station_id": station.station_id,
+                "obsdl_id": station.obsdl_id,
+                "station_type": station.station_type,
                 "name": station.name,
+                "prefecture": station.prefecture,
                 "lat": station.latitude,
                 "lon": station.longitude,
                 "elevation_m": station.elevation_m,
@@ -340,83 +688,78 @@ def bootstrap_dataset(
                 "normal_5day_tenths": list(station.normal_5day_tenths),
                 "observed_tenths": observed,
             })
-        print(
-            f"[{index:03d}/{len(normals):03d}] {station.station_id} {station.name} "
-            f"valid={valid}/{len(dates)}",
-            flush=True,
+    minimum_population = max(
+        MINIMUM_ACTIVE_STATIONS,
+        int(len(normals) * MINIMUM_POPULATION_RATIO),
+    )
+    if len(stations) < minimum_population:
+        raise ValueError(
+            f"active station coverage is too small: {len(stations)}/{len(normals)}"
         )
-        if request_delay > 0 and index < len(normals):
-            time.sleep(request_delay)
-    if len(stations) < MINIMUM_ACTIVE_STATIONS:
-        raise ValueError(f"active station coverage is too small: {len(stations)}")
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "dataset_id": "",
         "generated_at": "",
-        "element": {"code": "201", "name": "日平均気温", "unit": "℃", "storage_scale": 10},
+        "element": {
+            "code": "201",
+            "name": "日平均気温",
+            "unit": "℃",
+            "storage_scale": 10,
+        },
         "normal": {
             "period": "1991-2020",
             "label": "気象庁 2020年平年値（第5版）",
             "source_url": NORMAL_INDEX_URL,
         },
         "observation": {
-            "source": "気象庁 過去の気象データ・ダウンロード／毎日の全国データ一覧表",
+            "source": "気象庁 過去の気象データ・ダウンロード",
             "source_url": OBSDL_INDEX_URL,
-            "incremental_source_url": SYNOPDAY_URL.format(page=2),
+            "station_population_url": LATEST_PERIOD_TABLE_URL,
         },
         "normal_days": list(NORMAL_DAYS),
         "dates": dates,
         "stations": stations,
         "validation": {
             "minimum_valid_ratio": MINIMUM_VALID_RATIO,
+            "minimum_population_ratio": MINIMUM_POPULATION_RATIO,
             "accepted_obsdl_quality_codes": sorted(ACCEPTED_QUALITY_CODES),
-            "excluded_stations": EXCLUDED_STATION_IDS,
+            "official_population_station_count": len(population),
+            "official_population_hash": population_hash(population),
+            "normal_population_station_count": len(normals),
+            "normal_population_hash": hashlib.sha256(
+                "\n".join(station.station_id for station in normals).encode("ascii")
+            ).hexdigest(),
         },
     }
 
 
-def parse_synopday(raw: bytes) -> tuple[date, dict[str, int | None]]:
-    html = raw.decode("utf-8", errors="replace")
-    match = re.search(r"日別値:(\d{4})年(\d{2})月(\d{2})日", html)
-    if not match:
-        raise ValueError("synopday observation date is missing")
-    observed_date = date(*map(int, match.groups()))
-    parser = TableParser()
-    parser.feed(html)
-    values: dict[str, int | None] = {}
-    for row in parser.rows:
-        if len(row) < 6 or row[0] in {"地点", ""}:
-            continue
-        value = as_tenths(row[3])
-        if value is not None or row[3] in {"--", "///"}:
-            values[row[0]] = value
-    return observed_date, values
-
-
-def incremental_update(dataset: dict[str, Any], target_end: date, retention_days: int) -> bool:
+def incremental_update(
+    dataset: dict[str, Any],
+    target_end: date,
+    retention_days: int,
+    request_delay: float,
+    opener: urllib.request.OpenerDirector,
+) -> bool:
     existing_end = date.fromisoformat(dataset["dates"][-1])
     if target_end <= existing_end:
         return False
     gap = (target_end - existing_end).days
     if gap > MAX_INCREMENTAL_GAP_DAYS:
         raise ValueError(
-            f"incremental gap is {gap} days; rerun with --bootstrap "
+            f"incremental gap is {gap} days; a full rebuild is required "
             f"(maximum {MAX_INCREMENTAL_GAP_DAYS})"
         )
-    today_jst = target_end + timedelta(days=1)
-    stations_by_name = {station["name"]: station for station in dataset["stations"]}
-    for current in (existing_end + timedelta(days=offset) for offset in range(1, gap + 1)):
-        page = (today_jst - current).days + 1
-        page_date, values = parse_synopday(request_bytes(SYNOPDAY_URL.format(page=page)))
-        if page_date != current:
-            raise ValueError(f"synopday page {page} returned {page_date}, expected {current}")
-        matches = set(stations_by_name) & set(values)
-        if len(matches) < MINIMUM_ACTIVE_STATIONS:
-            raise ValueError(f"synopday station coverage is too small for {current}: {len(matches)}")
-        dataset["dates"].append(current.isoformat())
-        for name, station in stations_by_name.items():
-            station["observed_tenths"].append(values.get(name))
-
+    start = existing_end + timedelta(days=1)
+    observations = fetch_observations(
+        opener,
+        [station["obsdl_id"] for station in dataset["stations"]],
+        start,
+        target_end,
+        request_delay,
+    )
+    dataset["dates"].extend(iso_dates(start, target_end))
+    for station in dataset["stations"]:
+        station["observed_tenths"].extend(observations[station["obsdl_id"]])
     trim = max(0, len(dataset["dates"]) - retention_days)
     if trim:
         dataset["dates"] = dataset["dates"][trim:]
@@ -449,42 +792,28 @@ def period_anomaly_tenths(
         return None
     if expected == 5 and len(observed) == 5:
         start_date = date.fromisoformat(dates[start_index])
-        five_day_normal = station["normal_5day_tenths"][NORMAL_DAY_INDEX[start_date.strftime("%m-%d")]]
+        five_day_normal = station["normal_5day_tenths"][
+            NORMAL_DAY_INDEX[start_date.strftime("%m-%d")]
+        ]
         if five_day_normal is None:
             return None
         return (Decimal(sum(observed)) / len(observed)) - Decimal(five_day_normal)
-    return (Decimal(sum(observed)) / len(observed)) - (Decimal(sum(normals)) / len(normals))
+    return (
+        (Decimal(sum(observed)) / len(observed))
+        - (Decimal(sum(normals)) / len(normals))
+    )
 
 
-def latest_official_five_day() -> tuple[date, dict[str, Decimal]]:
-    rows = csv.DictReader(io.StringIO(request_bytes(LATEST_PERIOD_TABLE_URL).decode("cp932")))
-    end_date: date | None = None
-    values: dict[str, Decimal] = {}
-    for row in rows:
-        station_id = row["国際地点番号"].strip()
-        if not station_id or station_id in EXCLUDED_STATION_IDS:
-            continue
-        current_end = date(
-            int(row["終了日（年）"]),
-            int(row["終了日（月）"]),
-            int(row["終了日（日）"]),
-        )
-        end_date = current_end if end_date is None else end_date
-        if current_end != end_date:
-            raise ValueError("official five-day table has mixed end dates")
-        raw = row["前5日間平均気温平年差（℃）"].strip()
-        if raw not in {"", "///"}:
-            values[station_id] = Decimal(raw.replace("+", ""))
-    if end_date is None:
-        raise ValueError("official five-day table is empty")
-    return end_date, values
-
-
-def verify_latest_five_day(dataset: dict[str, Any]) -> dict[str, Any]:
-    official_end, official = latest_official_five_day()
+def verify_latest_five_day(
+    dataset: dict[str, Any],
+    official_end: date,
+    official: dict[str, Decimal],
+) -> dict[str, Any]:
     dataset_end = date.fromisoformat(dataset["dates"][-1])
     if official_end != dataset_end:
-        raise ValueError(f"official five-day end {official_end} != dataset end {dataset_end}")
+        raise ValueError(
+            f"official five-day end {official_end} != dataset end {dataset_end}"
+        )
     start_index = len(dataset["dates"]) - 5
     mismatches: list[str] = []
     exact_matches = 0
@@ -502,7 +831,10 @@ def verify_latest_five_day(dataset: dict[str, Any]) -> dict[str, Any]:
         )
         if anomaly_tenths is None:
             continue
-        actual = (anomaly_tenths / 10).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        actual = (anomaly_tenths / 10).quantize(
+            Decimal("0.1"),
+            rounding=ROUND_HALF_UP,
+        )
         compared += 1
         difference = abs(actual - expected)
         maximum_difference = max(maximum_difference, difference)
@@ -513,9 +845,13 @@ def verify_latest_five_day(dataset: dict[str, Any]) -> dict[str, Any]:
     if compared < MINIMUM_ACTIVE_STATIONS:
         raise ValueError(f"too few latest five-day comparisons: {compared}")
     if mismatches:
-        raise ValueError(f"latest five-day anomaly mismatches: {mismatches[:12]}")
+        raise ValueError(
+            f"latest five-day anomaly mismatches ({len(mismatches)}): "
+            f"{mismatches[:20]}"
+        )
     return {
         "official_end_date": official_end.isoformat(),
+        "official_value_count": len(official),
         "compared_station_count": compared,
         "exact_match_count": exact_matches,
         "difference_over_tolerance_count": 0,
@@ -529,14 +865,25 @@ def canonical_dataset_id(dataset: dict[str, Any]) -> str:
     candidate = deepcopy(dataset)
     candidate["dataset_id"] = ""
     candidate["generated_at"] = ""
-    raw = json.dumps(candidate, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    raw = json.dumps(
+        candidate,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
     return f"recent-temperature-{hashlib.sha256(raw).hexdigest()[:16]}"
 
 
 def atomic_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    raw = (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
-    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    raw = (
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n"
+    ).encode("utf-8")
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=path.parent,
+    )
     try:
         with os.fdopen(descriptor, "wb") as handle:
             handle.write(raw)
@@ -560,7 +907,12 @@ def sha256_path(path: Path) -> str:
     return digest.hexdigest()
 
 
-def write_dataset(dataset: dict[str, Any], retention_days: int) -> None:
+def write_dataset(
+    dataset: dict[str, Any],
+    retention_days: int,
+    official_end: date,
+    official_values: dict[str, Decimal],
+) -> None:
     dataset["validation"].update({
         "station_count": len(dataset["stations"]),
         "date_count": len(dataset["dates"]),
@@ -570,21 +922,35 @@ def write_dataset(dataset: dict[str, Any], retention_days: int) -> None:
         "latest_graph_center_date": (
             date.fromisoformat(dataset["dates"][-1]) - timedelta(days=2)
         ).isoformat(),
-        "latest_five_day_crosscheck": verify_latest_five_day(dataset),
+        "latest_five_day_crosscheck": verify_latest_five_day(
+            dataset,
+            official_end,
+            official_values,
+        ),
     })
-    dataset["generated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    dataset["generated_at"] = datetime.now(timezone.utc).isoformat(
+        timespec="seconds"
+    )
     dataset["dataset_id"] = canonical_dataset_id(dataset)
     atomic_json(LATEST_PATH, dataset)
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "dataset_id": dataset["dataset_id"],
         "generated_at": dataset["generated_at"],
         "element": dataset["element"],
         "normal_period": dataset["normal"]["period"],
         "observation_start": dataset["dates"][0],
         "observation_end": dataset["dates"][-1],
-        "latest_graph_center_date": dataset["validation"]["latest_graph_center_date"],
+        "latest_graph_center_date": dataset["validation"][
+            "latest_graph_center_date"
+        ],
         "station_count": len(dataset["stations"]),
+        "population_station_count": dataset["validation"][
+            "normal_population_station_count"
+        ],
+        "official_population_station_count": dataset["validation"][
+            "official_population_station_count"
+        ],
         "date_count": len(dataset["dates"]),
         "minimum_valid_ratio": MINIMUM_VALID_RATIO,
         "files": {
@@ -595,9 +961,11 @@ def write_dataset(dataset: dict[str, Any], retention_days: int) -> None:
             }
         },
         "sources": {
-            "normal": NORMAL_INDEX_URL,
+            "station_population": LATEST_PERIOD_TABLE_URL,
+            "station_index": STATION_INDEX_ARCHIVE_URL,
+            "normal_daily": NORMAL_DAILY_ARCHIVE_URL,
+            "normal_five_day": NORMAL_FIVE_DAY_ARCHIVE_URL,
             "observation": OBSDL_INDEX_URL,
-            "latest_daily": SYNOPDAY_URL.format(page=2),
             "crosscheck": LATEST_PERIOD_TABLE_URL,
         },
     }
@@ -606,16 +974,30 @@ def write_dataset(dataset: dict[str, Any], retention_days: int) -> None:
         "dataset_id": dataset["dataset_id"],
         "observation_start": dataset["dates"][0],
         "observation_end": dataset["dates"][-1],
-        "latest_graph_center_date": dataset["validation"]["latest_graph_center_date"],
+        "latest_graph_center_date": dataset["validation"][
+            "latest_graph_center_date"
+        ],
         "station_count": len(dataset["stations"]),
+        "population_station_count": dataset["validation"][
+            "normal_population_station_count"
+        ],
+        "official_population_station_count": dataset["validation"][
+            "official_population_station_count"
+        ],
         "date_count": len(dataset["dates"]),
-        "five_day_crosscheck": dataset["validation"]["latest_five_day_crosscheck"],
+        "five_day_crosscheck": dataset["validation"][
+            "latest_five_day_crosscheck"
+        ],
     }, ensure_ascii=False, indent=2))
 
 
 def load_existing() -> dict[str, Any]:
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    latest = json.loads((DATA_ROOT / manifest["files"]["latest"]["path"]).read_text(encoding="utf-8"))
+    latest = json.loads(
+        (DATA_ROOT / manifest["files"]["latest"]["path"]).read_text(
+            encoding="utf-8"
+        )
+    )
     if latest["dataset_id"] != manifest["dataset_id"]:
         raise ValueError("recent-temperature manifest and dataset IDs do not match")
     return latest
@@ -623,39 +1005,112 @@ def load_existing() -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--bootstrap", action="store_true", help="rebuild recent observations from the JMA download service")
+    parser.add_argument(
+        "--bootstrap",
+        action="store_true",
+        help="rebuild all recent observations from the JMA download service",
+    )
     parser.add_argument("--retention-days", type=int, default=125)
     parser.add_argument("--request-delay", type=float, default=0.2)
-    parser.add_argument("--normal-archive", type=Path, help="use an already downloaded official normal_surface.zip")
-    parser.add_argument("--target-end", type=date.fromisoformat, help="last observation date (default: yesterday JST)")
+    parser.add_argument(
+        "--station-index-archive",
+        type=Path,
+        help="use an already downloaded official amedas_station_index.zip",
+    )
+    parser.add_argument(
+        "--normal-daily-archive",
+        type=Path,
+        help="use an already downloaded official normal_amedas_daily.zip",
+    )
+    parser.add_argument(
+        "--normal-five-day-archive",
+        type=Path,
+        help="use an already downloaded official normal_amedas_daily_5day.zip",
+    )
+    parser.add_argument(
+        "--target-end",
+        type=date.fromisoformat,
+        help="last observation date (default: latest official table date)",
+    )
     args = parser.parse_args()
 
     if not 93 <= args.retention_days <= 180:
         raise ValueError("retention-days must be between 93 and 180")
-    now_jst = datetime.now(timezone(timedelta(hours=9))).date()
-    target_end = args.target_end or (now_jst - timedelta(days=1))
+    if not 0 <= args.request_delay <= 10:
+        raise ValueError("request-delay must be between 0 and 10 seconds")
 
-    if args.bootstrap or not (MANIFEST_PATH.is_file() and LATEST_PATH.is_file()):
+    official_raw = request_bytes(LATEST_PERIOD_TABLE_URL)
+    official_end, population, official_values = parse_latest_period_table(
+        official_raw
+    )
+    target_end = args.target_end or official_end
+    if target_end != official_end:
+        raise ValueError(
+            f"target end {target_end} must match latest official table {official_end}"
+        )
+
+    existing: dict[str, Any] | None = None
+    if MANIFEST_PATH.is_file() and LATEST_PATH.is_file():
+        existing = load_existing()
+    needs_bootstrap = (
+        args.bootstrap
+        or existing is None
+        or existing.get("schema_version") != 2
+        or existing.get("validation", {}).get("official_population_hash")
+        != population_hash(population)
+    )
+
+    opener = obsdl_opener()
+    if needs_bootstrap:
         start = target_end - timedelta(days=args.retention_days - 1)
         dataset = bootstrap_dataset(
-            load_normals(args.normal_archive),
+            load_normals(
+                population,
+                opener,
+                args.station_index_archive,
+                args.normal_daily_archive,
+                args.normal_five_day_archive,
+            ),
+            population,
             start,
             target_end,
             args.request_delay,
+            opener,
         )
-        write_dataset(dataset, args.retention_days)
+        write_dataset(
+            dataset,
+            args.retention_days,
+            official_end,
+            official_values,
+        )
         return
 
-    dataset = load_existing()
-    changed = incremental_update(dataset, target_end, args.retention_days)
+    dataset = existing
+    changed = incremental_update(
+        dataset,
+        target_end,
+        args.retention_days,
+        args.request_delay,
+        opener,
+    )
     if changed:
-        write_dataset(dataset, args.retention_days)
+        write_dataset(
+            dataset,
+            args.retention_days,
+            official_end,
+            official_values,
+        )
     else:
-        crosscheck = verify_latest_five_day(dataset)
+        crosscheck = verify_latest_five_day(
+            dataset,
+            official_end,
+            official_values,
+        )
         print(json.dumps({
             "dataset_id": dataset["dataset_id"],
             "changed": False,
             "observation_end": dataset["dates"][-1],
+            "station_count": len(dataset["stations"]),
             "five_day_crosscheck": crosscheck,
         }, ensure_ascii=False, indent=2))
 

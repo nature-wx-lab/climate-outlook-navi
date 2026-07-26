@@ -395,10 +395,11 @@ footer a { color: inherit; text-decoration-thickness: 1px; text-underline-offset
     box-shadow: 0 3px 16px #18323d4a;
   }
   body.settings-open .control-panel { display: block; }
+  .leaflet-top, .leaflet-bottom { z-index: 750; }
   .detail-panel {
     display: none;
     position: absolute;
-    z-index: 800;
+    z-index: 900;
     right: 8px;
     bottom: 8px;
     width: min(360px, calc(100vw - 16px));

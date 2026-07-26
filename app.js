@@ -1,5 +1,5 @@
-import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260726-recent-temperature1";
-import { ClimateMap, TEMPERATURE_ANOMALY_LEGEND } from "./map.js?v=20260726-recent-temperature1";
+import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260726-recent-temperature2";
+import { ClimateMap, TEMPERATURE_ANOMALY_LEGEND } from "./map.js?v=20260726-recent-temperature2";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
 const ELEMENT_FALLBACKS = {
@@ -843,7 +843,7 @@ function renderRecentSelection() {
   document.body.classList.remove("has-preview");
   if (!point) {
     elements.recentStationId.textContent = "地点を選択";
-    elements.recentStationName.textContent = "地図の丸に触れると値を確認できます";
+    elements.recentStationName.textContent = "地図の四角に触れると値を確認できます";
     elements.recentAnomalyValue.textContent = "--";
     elements.recentPeriodLabel.textContent = recentPeriodText();
     elements.recentObservedMean.textContent = "--";
@@ -852,7 +852,11 @@ function renderRecentSelection() {
     elements.recentStationNote.textContent = "地点値を色分けしたMAPです。観測地点間を面的に補間していません。";
     return;
   }
-  elements.recentStationId.textContent = `観測所 ${point.stationId}｜標高 ${point.elevationM.toFixed(1)}m`;
+  elements.recentStationId.textContent = [
+    `観測所 ${point.stationId}`,
+    point.stationType === "amedas" ? "アメダス" : "気象台等",
+    `標高 ${point.elevationM.toFixed(1)}m`,
+  ].join("｜");
   elements.recentStationName.textContent = point.name;
   elements.recentAnomalyValue.textContent = formatSignedTemperature(point.anomaly);
   elements.recentPeriodLabel.textContent = recentPeriodText();
@@ -944,7 +948,7 @@ function switchMapMode(mode) {
   state.mapMode = mode;
   document.body.classList.toggle("recent-view", mode === "recent");
   elements.sourceStatus.title = mode === "recent"
-    ? "気象台・特別地域気象観測所の地点値。地点間は補間していません。"
+    ? "気象台等とアメダスの全国観測地点値。地点間は補間していません。"
     : "全国表示用ラスターは描画縮約。地点値は全387,717メッシュを保持した要素別バイナリから参照します。";
   clearPreview({ render: false });
   if (mode === "recent") {
@@ -1032,9 +1036,9 @@ function updateStatus() {
       `観測 ${formatIsoDate(manifest.observation_start)}〜${formatIsoDate(manifest.observation_end)}`,
       `${manifest.station_count}地点`,
     ].join("｜");
-    elements.sourceDetailStatus.textContent = "気象台・特別地域気象観測所の地点値です。観測地点間を面的に補間していません。";
+    elements.sourceDetailStatus.textContent = "気象台等とアメダスの全国観測地点値です。観測地点間を面的に補間していません。";
     elements.mapInfoPrimary.textContent = `平均気温の平年差｜${recentPeriodText()}`;
-    elements.mapInfoSecondary.textContent = `${state.recentResult?.points.length || 0}地点｜1991–2020平年値`;
+    elements.mapInfoSecondary.textContent = `${state.recentResult?.points.length || 0}/${manifest.station_count}地点｜1991–2020平年値`;
     return;
   }
   const context = forecastContext(false);
@@ -1516,12 +1520,12 @@ function bindControls() {
           detailLines: [
             point
               ? `${point.name}｜平年差 ${formatSignedTemperature(point.anomaly)}｜期間平均 ${point.observedMean.toFixed(1)}℃`
-              : `全国 ${state.recentResult.points.length}地点`,
+              : `全国 ${state.recentResult.points.length}/${store.recentTemperatureManifest.station_count}地点`,
             "平年：気象庁2020年平年値（1991–2020）",
             state.recentResult.expectedDays === 5
               ? "5日：気象庁の公式5日間平年値を使用"
               : "任意期間：公式日別平年値から独自集計",
-            "表示：観測地点値（地点間の面的補間なし）",
+            "表示：気象台等＋アメダス（地点間の面的補間なし）",
           ],
           legend: {
             ...TEMPERATURE_ANOMALY_LEGEND,
@@ -1605,7 +1609,7 @@ async function initialize() {
       else map.setView(bounds.centerLat, bounds.centerLon, 9);
     }
     elements.sourceStatus.title = state.mapMode === "recent"
-      ? "気象台・特別地域気象観測所の地点値。地点間は補間していません。"
+      ? "気象台等とアメダスの全国観測地点値。地点間は補間していません。"
       : "全国表示用ラスターは描画縮約。地点値は全387,717メッシュを保持した要素別バイナリから参照します。";
     bindControls();
     renderSelected();
