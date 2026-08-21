@@ -1,5 +1,5 @@
 import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260726-recent-temperature2";
-import { ClimateMap, TEMPERATURE_ANOMALY_LEGEND } from "./map.js?v=20260727-map-layers1";
+import { ClimateMap, TEMPERATURE_ANOMALY_LEGEND } from "./map.js?v=20260821-default-zoom1";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
 const ELEMENT_FALLBACKS = {
