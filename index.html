@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>気候ものさしナビ｜Nature Wx Lab</title>
-  <meta name="description" content="全国1kmメッシュのいつもの気候、季節予報、最近の任意期間の平均気温平年差を全国地図で読み比べるツールです。">
+  <meta name="description" content="平年値、過去の実況値、この先の季節予報を3つのモードで全国地図に見える化し、平年と比較できるツールです。">
   <meta name="application-name" content="Climate Outlook Navi">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://nature-wx-lab.github.io/climate-outlook-navi/">
@@ -12,18 +12,18 @@
   <meta property="og:locale" content="ja_JP">
   <meta property="og:site_name" content="Nature Wx Lab">
   <meta property="og:title" content="気候ものさしナビ｜Climate Outlook Navi">
-  <meta property="og:description" content="全国1kmメッシュの気候平均と季節予報に加え、最近の任意期間の平均気温平年差を全国地点MAPで確認できます。">
+  <meta property="og:description" content="全国1kmメッシュの平年値、過去の実況値、この先の季節予報を3つのモードで確認できます。">
   <meta property="og:url" content="https://nature-wx-lab.github.io/climate-outlook-navi/">
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f7883'/%3E%3Cpath d='M17 44V20h7l16 15V20h7v24h-7L24 29v15z' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="./styles.css?v=20260727-map-layers1">
+  <link rel="stylesheet" href="./styles.css?v=20260821-three-modes1">
 </head>
 <body>
   <header class="topbar">
     <div class="product-title">
       <h1>気候ものさしナビ</h1>
-      <p>あなたの場所の「いつもの気候」と「この先」を、地図でくらべる。</p>
+      <p>「いつもの気候」「これまで」「この先」を、地図でくらべる。</p>
     </div>
     <div class="header-actions">
       <button id="settingsToggle" class="header-button settings-toggle" type="button">設定</button>
@@ -51,13 +51,26 @@
       <button id="settingsClose" class="panel-close" type="button" aria-label="設定を閉じる">×</button>
       <section>
         <div class="control-label">地図モード</div>
-        <div class="segmented two" id="mapModeControls">
-          <button class="active" data-map-mode="climate" type="button">気候平均・予報</button>
-          <button data-map-mode="recent" type="button">最近の気温平年差</button>
+        <div class="segmented three mode-switcher" id="mapModeControls">
+          <button data-map-mode="climate" type="button" title="1kmメッシュの気候統計を見る">平年値</button>
+          <button class="active" data-map-mode="recent" type="button" title="過去の観測値を期間平均して平年と比べる">実況値</button>
+          <button data-map-mode="forecast" type="button" title="この先の季節予報を平年と比べる">予測値</button>
         </div>
       </section>
 
-      <section id="climateControlsSection">
+      <section id="forecastControlsSection" hidden>
+        <h2>この先の予測値</h2>
+        <p class="section-intro">気象庁の季節予報を、公式の予報地域ごとに表示します。</p>
+        <label class="check-row"><input id="forecastToggle" type="checkbox" checked><span>季節予報の地域を表示</span></label>
+        <label id="forecastProductField">予報<select id="forecastProduct"><option value="P1M">1か月予報</option><option value="P3M">3か月予報</option></select></label>
+        <label id="forecastTermField">対象期間<select id="forecastTerm"></select></label>
+        <label id="forecastOpacityField" class="range-row">地域面の濃さ<input id="forecastOpacity" type="range" min="8" max="55" value="28"></label>
+        <p id="forecastControlNote" class="micro-note">色は地域内で最も確率が高い階級。確率値を平年値へ足したり、1kmへ補間したりしません。</p>
+      </section>
+
+      <section id="climateControlsSection" hidden>
+        <h2 id="climateControlsHeading">気候統計（1km）</h2>
+        <p id="climateControlsIntro" class="section-intro">30年平均の分布と、2つの平均期間の更新差を表示します。</p>
         <label>要素<select id="elementSelect" aria-label="表示する気候要素"><option value="201">平均気温</option></select></label>
         <label>月・年<select id="monthSelect" aria-label="表示する月・年"></select></label>
         <div class="control-label">表示</div>
@@ -67,20 +80,21 @@
         </div>
         <div class="control-label">平均期間</div>
         <div class="segmented stacked" id="windowControls">
-          <button data-window="1991_2020" type="button">1991–2020<br><small>気象庁平年期間・独自算出</small></button>
-          <button class="active" data-window="1996_2025" type="button">1996–2025<br><small>最新30年・独自算出</small></button>
+          <button class="active" data-window="1991_2020" type="button">1991–2020<br><small>気象庁平年期間・独自算出</small></button>
+          <button data-window="1996_2025" type="button">1996–2025<br><small>最新30年・独自算出</small></button>
         </div>
         <label class="range-row">気候面の濃さ<input id="climateOpacity" type="range" min="25" max="100" value="86"></label>
         <p id="climateControlNote" class="micro-note">更新差は重複する2つの30年平均の差です。30年間の温暖化量そのものではありません。</p>
       </section>
 
-      <section id="recentControlsSection" hidden>
-        <h2>期間の平均気温平年差</h2>
+      <section id="recentControlsSection">
+        <h2>過去の実況値</h2>
+        <p class="section-intro">日平均気温を期間平均し、同じ期間の1991–2020年平年値と比較します。</p>
         <div class="segmented recent-presets" id="recentPresetControls">
-          <button class="active" data-recent-preset="5day" type="button">5日</button>
+          <button data-recent-preset="5day" type="button">5日</button>
           <button data-recent-preset="7day" type="button">1週間</button>
           <button data-recent-preset="dekad" type="button">旬</button>
-          <button data-recent-preset="month" type="button">1か月</button>
+          <button class="active" data-recent-preset="month" type="button">過去1か月</button>
           <button data-recent-preset="90day" type="button">3か月</button>
         </div>
         <div class="date-range-grid">
@@ -93,16 +107,7 @@
           <input id="recentCenterSlider" type="range" min="2" max="2" value="2">
           <span id="recentCenterLabel" class="range-caption">--</span>
         </label>
-        <p id="recentControlNote" class="micro-note">5日は前後2日を含む計5日で、気象庁の「前3か月間の気温経過」と同じ中心日に合わせます。任意期間は93日以内です。</p>
-      </section>
-
-      <section id="forecastControlsSection">
-        <h2>この先の傾向</h2>
-        <label class="check-row"><input id="forecastToggle" type="checkbox" checked><span>季節予報の地域を重ねる</span></label>
-        <label id="forecastProductField">予報<select id="forecastProduct"><option value="P1M">1か月予報</option><option value="P3M">3か月予報</option></select></label>
-        <label id="forecastTermField">対象期間<select id="forecastTerm"></select></label>
-        <label id="forecastOpacityField" class="range-row">地域面の濃さ<input id="forecastOpacity" type="range" min="8" max="55" value="28"></label>
-        <p id="forecastControlNote" class="micro-note">色は地域内で最も確率が高い階級。確率値を気候平均へ足したり、1kmへ補間したりしません。</p>
+        <p id="recentControlNote" class="micro-note">初期表示は最新日を含む過去30日です。任意期間は93日以内です。</p>
       </section>
 
       <section>
@@ -161,7 +166,7 @@
       </section>
     </aside>
 
-    <section class="map-shell" aria-label="気候地図">
+    <section class="map-shell" aria-label="平年値・実況値・予測値の地図">
       <div id="mapInfo" class="map-info">
         <strong id="mapInfoPrimary">データを読み込み中</strong>
         <span id="mapInfoSecondary"></span>
@@ -177,7 +182,7 @@
         <div class="legend-labels visually-hidden"><span id="legendLow">−27℃以下</span><span id="legendMiddle">0℃</span><span id="legendHigh">30℃超</span></div>
       </aside>
 
-      <aside id="seasonLegend" class="season-legend" aria-label="季節予報の凡例">
+      <aside id="seasonLegend" class="season-legend" aria-label="季節予報の凡例" hidden>
         <strong>季節予報・地域確率</strong>
         <div id="seasonKeys" class="season-keys"><span><i class="below"></i><b id="seasonClassBelow">低い</b></span><span><i class="normal"></i><b id="seasonClassNormal">平年並</b></span><span><i class="above"></i><b id="seasonClassAbove">高い</b></span><span><i class="tie"></i><b>同率首位</b></span></div>
         <div id="seasonStatus" class="season-status">読み込み中</div>
@@ -190,7 +195,7 @@
     <aside class="detail-panel" aria-label="地点詳細">
       <button id="detailClose" class="panel-close" type="button" aria-label="地点詳細を閉じる">×</button>
       <section id="recentDetailSection" class="recent-detail" hidden>
-        <h2>観測地点の期間平年差</h2>
+        <h2>観測地点の実況値</h2>
         <span id="recentStationId" class="eyebrow">地点を選択</span>
         <strong id="recentStationName">地図の四角に触れると値を確認できます</strong>
         <strong id="recentAnomalyValue" class="primary-value">--</strong>
@@ -203,7 +208,7 @@
         <p id="recentStationNote" class="micro-note">地点値を色分けしたMAPです。観測地点間を面的に補間していません。</p>
       </section>
 
-      <section id="selectedClimateSection" class="selected-climate">
+      <section id="selectedClimateSection" class="selected-climate" hidden>
         <div class="point-heading-row">
           <h2>この1kmの気候</h2>
           <button id="pointUnpin" class="point-unpin" type="button" hidden>固定解除</button>
@@ -240,7 +245,7 @@
         <p id="pointChartNote" class="micro-note">2つの30年平均を月別に比較。季節予報の推移ではありません。</p>
       </section>
 
-      <section id="selectedForecastSection" class="selected-forecast">
+      <section id="selectedForecastSection" class="selected-forecast" hidden>
         <h2>この地域の季節予報</h2>
         <strong id="forecastRegion">地域レイヤ上で地点をクリック</strong>
         <p id="forecastPeriod">対象期間を読み込み中</p>
@@ -252,11 +257,19 @@
         <p id="forecastNote" class="micro-note">気候平均と季節予報は異なる空間単位です。</p>
       </section>
 
-      <section id="climateReadingGuide" class="reading-guide">
+      <section id="climateReadingGuide" class="reading-guide" hidden>
         <h2>読み方</h2>
         <ol>
-          <li>1km気候面で「いつもの値」を見る</li>
-          <li>地域予報の3確率で「この先どちらへ傾きそうか」を見る</li>
+          <li>1km気候面で30年平均の分布を見る</li>
+          <li>月・年と平均期間を切り替えて比べる</li>
+          <li>更新差は30年間の変化量そのものではない</li>
+        </ol>
+      </section>
+      <section id="forecastReadingGuide" class="reading-guide" hidden>
+        <h2>読み方</h2>
+        <ol>
+          <li>地域予報の3確率で、この先の傾向を見る</li>
+          <li>比較用の1km平年面は予報と異なる空間単位</li>
           <li>確率は偏差量や地点の数値予報ではない</li>
         </ol>
       </section>
@@ -264,7 +277,7 @@
         <h2>読み方</h2>
         <ol>
           <li>色は各観測地点の期間平均気温平年差</li>
-          <li>5日は前後2日を含む中心日表示</li>
+          <li>初期表示は最新日までの過去1か月</li>
           <li>四角の間は補間せず、地点値として読む</li>
         </ol>
       </section>
@@ -272,10 +285,10 @@
   </main>
 
   <footer>
-    気候平均：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。最近の気温平年差：<a href="https://www.data.jma.go.jp/stats/mdrr/normal/index.html" target="_blank" rel="noopener noreferrer">気象庁2020年平年値</a>と日平均気温から独自集計した気象台等・アメダスの観測地点値。地点間は補間していません。地図・詳細地図・地形：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院「地理院タイル」</a>。色別標高図の海域部は海上保安庁海洋情報部の資料を使用して作成。
+    平年値：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。実況値：<a href="https://www.data.jma.go.jp/stats/mdrr/normal/index.html" target="_blank" rel="noopener noreferrer">気象庁2020年平年値</a>と日平均気温から独自集計した気象台等・アメダスの観測地点値。地点間は補間していません。予測値：気象庁1か月予報・3か月予報の地域確率。地図・詳細地図・地形：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院「地理院タイル」</a>。色別標高図の海域部は海上保安庁海洋情報部の資料を使用して作成。
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260821-default-zoom1"></script>
+  <script type="module" src="./app.js?v=20260821-three-modes1"></script>
 </body>
 </html>

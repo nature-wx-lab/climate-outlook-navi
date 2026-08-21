@@ -47,9 +47,9 @@ const PRODUCT_LABELS = { P1M: "1か月予報", P3M: "3か月予報" };
 const store = new ClimateDataStore();
 const currentMonth = new Date().getMonth() + 1;
 const state = {
-  mapMode: "climate",
+  mapMode: "recent",
   element: "201",
-  window: "1996_2025",
+  window: "1991_2020",
   month: currentMonth,
   mode: "absolute",
   climateOpacity: 0.86,
@@ -71,7 +71,7 @@ const state = {
   regionCode: null,
   regionName: null,
   selectedForecast: null,
-  recentPreset: "5day",
+  recentPreset: "month",
   recentStart: null,
   recentEnd: null,
   recentResult: null,
@@ -93,10 +93,10 @@ const elements = Object.fromEntries([
   "probabilityBelow", "probabilityNormal", "probabilityAbove", "forecastNote", "copyLink",
   "saveImage", "locate", "resetView", "notice", "settingsToggle", "settingsClose", "detailClose",
   "pointChartSection", "pointChartMeasure", "pointMonthlyChart", "pointChartCaption", "pointChartTableBody", "pointChartNote",
-  "climateControlsSection", "recentControlsSection", "forecastControlsSection",
+  "climateControlsSection", "climateControlsHeading", "climateControlsIntro", "recentControlsSection", "forecastControlsSection",
   "recentPresetControls", "recentStart", "recentEnd", "recentApply", "recentCenterField", "recentCenterSlider",
   "recentCenterLabel", "recentControlNote", "recentDetailSection", "selectedClimateSection",
-  "selectedForecastSection", "climateReadingGuide", "recentReadingGuide", "recentStationId",
+  "selectedForecastSection", "climateReadingGuide", "forecastReadingGuide", "recentReadingGuide", "recentStationId",
   "recentStationName", "recentAnomalyValue", "recentPeriodLabel", "recentObservedMean",
   "recentNormalMean", "recentValidDays", "recentStationNote",
   "placeLabelsToggle", "placeLabelOpacity", "placeLabelOpacityValue",
@@ -393,14 +393,14 @@ const map = new ClimateMap("map", {
     else selectAtLatLon(latlng.lat, latlng.lng);
   },
   onRegionClick: (selection) => {
-    if (state.mapMode === "climate") selectAtLatLon(selection.latlng.lat, selection.latlng.lng, selection);
+    if (state.mapMode === "forecast") selectAtLatLon(selection.latlng.lat, selection.latlng.lng, selection);
   },
   onRecentStationClick: (point) => selectRecentStation(point),
   onViewChange: () => {
     if (state.initialized) syncUrl();
   },
   onPointerMove: (latlng) => {
-    if (state.mapMode === "climate") scheduleHover(latlng);
+    if (["climate", "forecast"].includes(state.mapMode)) scheduleHover(latlng);
   },
   onPointerLeave: () => clearPreview(),
   onClimateLoad: () => setNotice("気候面を表示しました", "ok"),
@@ -459,13 +459,22 @@ function optionalNumberParam(params, key) {
 function initializeRecentState() {
   const range = store.recentTemperatureRange();
   if (!range) throw new Error("最近の気温平年差の収録期間がありません");
-  state.recentStart = addDays(range.latestCenter, -2);
-  state.recentEnd = addDays(range.latestCenter, 2);
+  state.recentStart = addDays(range.end, -29);
+  state.recentEnd = range.end;
+}
+
+function inferRecentPreset(start, end) {
+  const days = inclusiveDayCount(start, end);
+  if (days === 5) return "5day";
+  if (days === 7) return "7day";
+  if (days === 30) return "month";
+  if (days === 90) return "90day";
+  return "custom";
 }
 
 function parseInitialState() {
   const params = new URLSearchParams(location.search);
-  if (["climate", "recent"].includes(params.get("view"))) state.mapMode = params.get("view");
+  if (["climate", "recent", "forecast"].includes(params.get("view"))) state.mapMode = params.get("view");
   if (["1991_2020", "1996_2025"].includes(params.get("window"))) state.window = params.get("window");
   const month = Number(params.get("month"));
   if (Number.isInteger(month)) state.month = month;
@@ -511,7 +520,7 @@ function parseInitialState() {
   ) {
     state.recentStart = recentStart;
     state.recentEnd = recentEnd;
-    state.recentPreset = inclusiveDayCount(recentStart, recentEnd) === 5 ? "5day" : "custom";
+    state.recentPreset = inferRecentPreset(recentStart, recentEnd);
   }
   const lat = optionalNumberParam(params, "lat");
   const lon = optionalNumberParam(params, "lon");
@@ -569,8 +578,16 @@ function applyRecentControls() {
   elements.recentCenterLabel.textContent = formatIsoDate(center);
   elements.recentControlNote.textContent = [
     "5日は前後2日を含む計5日で、気象庁の「前3か月間の気温経過」と同じ中心日に合わせます。",
+    "過去1か月は最新日を含む直近30日です。",
     `収録 ${formatIsoDate(range.start)}〜${formatIsoDate(range.end)}。任意期間は93日以内です。`,
   ].join(" ");
+}
+
+function syncElementAvailability() {
+  const forecastMode = state.mapMode === "forecast";
+  [...elements.elementSelect.options].forEach((option) => {
+    option.disabled = forecastMode && !ELEMENT_FALLBACKS[option.value]?.forecastElement;
+  });
 }
 
 function applyControls() {
@@ -593,16 +610,24 @@ function applyControls() {
   elements.forecastProduct.value = state.forecastProduct;
   elements.forecastOpacity.value = String(Math.round(state.forecastOpacity * 100));
   syncMapLayerControls();
+  syncElementAvailability();
   document.getElementById("windowControls").classList.toggle("muted-control", state.mode === "difference");
   const recent = state.mapMode === "recent";
+  const climate = state.mapMode === "climate";
+  const forecast = state.mapMode === "forecast";
   elements.climateControlsSection.hidden = recent;
-  elements.forecastControlsSection.hidden = recent;
+  elements.climateControlsHeading.textContent = forecast ? "比較する平年値（1km）" : "気候統計（1km）";
+  elements.climateControlsIntro.textContent = forecast
+    ? "季節予報と同じ要素の平年分布を比較表示します。予報地域は1kmへ補間しません。"
+    : "30年平均の分布と、2つの平均期間の更新差を表示します。";
+  elements.forecastControlsSection.hidden = !forecast;
   elements.recentControlsSection.hidden = !recent;
   elements.recentDetailSection.hidden = !recent;
   elements.selectedClimateSection.hidden = recent;
   if (recent) elements.pointChartSection.hidden = true;
-  elements.selectedForecastSection.hidden = recent;
-  elements.climateReadingGuide.hidden = recent;
+  elements.selectedForecastSection.hidden = !forecast;
+  elements.climateReadingGuide.hidden = !climate;
+  elements.forecastReadingGuide.hidden = !forecast;
   elements.recentReadingGuide.hidden = !recent;
   if (recent) applyRecentControls();
 }
@@ -657,7 +682,7 @@ function forecastContext(normalize = true) {
   return {
     config, forecastElement, forecastName, product, elementData, terms, term, regionCount, labels, reason,
     supported: Boolean(forecastElement && elementData?.supported),
-    canOverlay: Boolean(state.forecastVisible && forecastElement && elementData?.supported && regionCount > 0),
+    canOverlay: Boolean(state.mapMode === "forecast" && state.forecastVisible && forecastElement && elementData?.supported && regionCount > 0),
   };
 }
 
@@ -870,7 +895,7 @@ function updateClimateControlNote() {
 }
 
 function updateClimate() {
-  if (state.mapMode !== "climate") return;
+  if (!["climate", "forecast"].includes(state.mapMode)) return;
   map.setRecentTemperature([], false);
   const path = store.climateRasterPath(state);
   map.setClimateRaster(path, store.climateManifest.rasters.render, state.climateOpacity);
@@ -948,7 +973,7 @@ function setRecentPreset(preset) {
     state.recentStart = `${end.slice(0, 8)}${String(startDay).padStart(2, "0")}`;
     state.recentEnd = end;
   } else if (preset === "month") {
-    state.recentStart = `${end.slice(0, 8)}01`;
+    state.recentStart = addDays(end, -29);
     state.recentEnd = end;
   } else if (preset === "90day") {
     state.recentStart = addDays(end, -89);
@@ -987,18 +1012,28 @@ function updateRecentTemperature() {
   syncUrl();
 }
 
-function switchMapMode(mode) {
-  if (!["climate", "recent"].includes(mode) || mode === state.mapMode) return;
+async function switchMapMode(mode) {
+  if (!["climate", "recent", "forecast"].includes(mode) || mode === state.mapMode) return;
   state.mapMode = mode;
   document.body.classList.toggle("recent-view", mode === "recent");
+  document.body.classList.toggle("forecast-view", mode === "forecast");
   elements.sourceStatus.title = mode === "recent"
     ? "気象台等とアメダスの全国観測地点値。地点間は補間していません。"
-    : "全国表示用ラスターは描画縮約。地点値は全387,717メッシュを保持した要素別バイナリから参照します。";
+    : mode === "forecast"
+      ? "季節予報は公式地域確率、比較面は独自算出した1km平年値です。"
+      : "全国表示用ラスターは描画縮約。地点値は全387,717メッシュを保持した要素別バイナリから参照します。";
   clearPreview({ render: false });
   if (mode === "recent") {
     updateRecentTemperature();
   } else {
     map.setRecentTemperature([], false);
+    if (mode === "forecast") {
+      state.forecastVisible = true;
+      if (!elementConfig().forecastElement) {
+        await switchElement("201");
+        return;
+      }
+    }
     renderSelected();
     applyControls();
     updateClimate();
@@ -1012,7 +1047,7 @@ function updateForecastClassLabels(labels) {
 }
 
 function updateForecast() {
-  if (state.mapMode !== "climate") {
+  if (state.mapMode !== "forecast") {
     map.setSeasonOverlay(store.regions, null, false);
     elements.seasonLegend.hidden = true;
     return;
@@ -1085,20 +1120,27 @@ function updateStatus() {
     elements.mapInfoSecondary.textContent = `${state.recentResult?.points.length || 0}/${manifest.station_count}地点｜1991–2020平年値`;
     return;
   }
+  if (state.mapMode === "climate") {
+    elements.sourceStatus.textContent = `気候データ ${store.climateManifest.dataset_id}｜${store.climateManifest.mesh_count.toLocaleString("ja-JP")}メッシュ`;
+    elements.sourceDetailStatus.textContent = "30年平均を独自算出・独自内挿した1km面です。季節予報は予測値モードで表示します。";
+    elements.mapInfoPrimary.textContent = mapPrimaryTitle();
+    elements.mapInfoSecondary.textContent = "平年値モード｜1km気候統計";
+    return;
+  }
   const context = forecastContext(false);
   const climate = `気候データ ${store.climateManifest.dataset_id}｜${store.climateManifest.mesh_count.toLocaleString("ja-JP")}メッシュ`;
   const season = context.product && context.forecastElement
     ? `｜季節予報 ${formatJst(context.product.report_datetime)}発表`
     : "";
   elements.sourceStatus.textContent = `${climate}${season}`;
-  elements.sourceDetailStatus.textContent = "地図面は全国把握用の描画縮約です。クリック値は全387,717メッシュを保持した地点参照データから表示します。";
-  const overlay = context.canOverlay
-    ? `季節予報：${periodLabel(context.term)}`
+  elements.sourceDetailStatus.textContent = "季節予報は公式地域確率、比較面は独自算出した1km平年値です。予報地域を1kmへ補間していません。";
+  const forecastTitle = context.canOverlay
+    ? `${PRODUCT_LABELS[state.forecastProduct]}・${context.forecastName}｜${periodLabel(context.term)}`
     : context.reason
-      ? "季節予報：表示なし・未発表"
-      : "季節予報：OFF";
-  elements.mapInfoPrimary.textContent = mapPrimaryTitle();
-  elements.mapInfoSecondary.textContent = overlay;
+      ? `${PRODUCT_LABELS[state.forecastProduct]}・${context.forecastName}｜表示なし`
+      : `${PRODUCT_LABELS[state.forecastProduct]}・${context.forecastName}｜OFF`;
+  elements.mapInfoPrimary.textContent = forecastTitle;
+  elements.mapInfoSecondary.textContent = `比較面：${mapPrimaryTitle()}`;
 }
 
 let selectionSequence = 0;
@@ -1374,7 +1416,7 @@ function buildUrl() {
   }
   const view = map.viewState();
   url.searchParams.set("z", view.zoom);
-  if (state.mapMode === "climate" && state.meshCode) {
+  if (["climate", "forecast"].includes(state.mapMode) && state.meshCode) {
     url.searchParams.set("mesh", state.meshCode);
     if (state.regionCode) url.searchParams.set("region", state.regionCode);
   } else {
@@ -1470,7 +1512,7 @@ function bindControls() {
     }
     state.recentStart = start;
     state.recentEnd = end;
-    state.recentPreset = days === 5 ? "5day" : "custom";
+    state.recentPreset = inferRecentPreset(start, end);
     updateRecentTemperature();
   });
   elements.recentCenterSlider.addEventListener("input", () => {
@@ -1636,11 +1678,21 @@ function bindControls() {
         const forecastDetail = state.selectedForecast && context.canOverlay
           ? `${state.regionName || state.regionCode}｜${state.selectedForecast.forecast_region_name}｜${forecastLeadLabel(state.selectedForecast.probabilities, context.labels)}｜${context.labels[0]}${state.selectedForecast.probabilities[0]}%・${context.labels[1]}${state.selectedForecast.probabilities[1]}%・${context.labels[2]}${state.selectedForecast.probabilities[2]}%`
           : context.reason || "季節予報地域: 地点未選択";
-        const forecastPeriod = context.term ? `｜季節予報：${periodLabel(context.term)}` : "";
-        blob = await map.capture({
-          subtitle: `${mapPrimaryTitle()}${forecastPeriod}`,
+        const forecastMode = state.mapMode === "forecast";
+        const forecastPeriod = forecastMode && context.term ? `｜季節予報：${periodLabel(context.term)}` : "";
+        const captureSubtitle = forecastMode
+          ? `${PRODUCT_LABELS[state.forecastProduct]}・${context.forecastName}${forecastPeriod}｜比較面：${mapPrimaryTitle()}`
+          : mapPrimaryTitle();
+        const detailLines = [
           detail,
-          forecastDetail,
+          ...(forecastMode ? [forecastDetail] : []),
+          "平年値：気象庁観測から独自算出・独自内挿",
+          "標高：国土数値情報 G04-a（国土交通省）",
+          ...(forecastMode ? ["予測値：気象庁・地域確率｜灰色＝同率首位"] : []),
+        ];
+        blob = await map.capture({
+          subtitle: captureSubtitle,
+          detailLines,
           legend: {
             title: elements.climateLegendTitle.textContent,
             unit: elementConfig().unit,
@@ -1677,10 +1729,16 @@ async function initialize() {
     populateElements();
     initializeRecentState();
     const initialView = parseInitialState();
+    if (state.mapMode === "forecast" && !elementConfig().forecastElement) {
+      await store.setElement("201");
+      state.element = store.activeElementCode;
+      populateElements();
+    }
     populateMonths();
     if (!elementConfig().forecastElement) state.forecastVisible = false;
     forecastContext(true);
     document.body.classList.toggle("recent-view", state.mapMode === "recent");
+    document.body.classList.toggle("forecast-view", state.mapMode === "forecast");
     applyControls();
     map.setBase(state.base);
     map.setPlaceLabels(store.recentTemperature.stations);
@@ -1700,7 +1758,7 @@ async function initialize() {
       updateClimate();
       updateForecast();
     }
-    if (state.mapMode === "climate" && state.meshCode) {
+    if (["climate", "forecast"].includes(state.mapMode) && state.meshCode) {
       const bounds = meshBounds(state.meshCode);
       await selectAtLatLon(bounds.centerLat, bounds.centerLon, null, { quiet: true });
       if (initialView.zoom) map.setView(bounds.centerLat, bounds.centerLon, initialView.zoom);
@@ -1708,7 +1766,9 @@ async function initialize() {
     }
     elements.sourceStatus.title = state.mapMode === "recent"
       ? "気象台等とアメダスの全国観測地点値。地点間は補間していません。"
-      : "全国表示用ラスターは描画縮約。地点値は全387,717メッシュを保持した要素別バイナリから参照します。";
+      : state.mapMode === "forecast"
+        ? "季節予報は公式地域確率、比較面は独自算出した1km平年値です。"
+        : "全国表示用ラスターは描画縮約。地点値は全387,717メッシュを保持した要素別バイナリから参照します。";
     bindControls();
     renderSelected();
     syncUrl();

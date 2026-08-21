@@ -1119,7 +1119,30 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require('document.body.classList.toggle("has-preview"' in app_script, "narrow live preview visibility state is missing")
     require("selectionPending" in app_script, "point selection/hover race guard is missing")
     require("HOVER_INTERVAL_MS = 100" in app_script, "live point preview throttle contract changed")
-    require('data-map-mode="recent"' in index, "recent temperature map mode is missing")
+    for map_mode in ("climate", "recent", "forecast"):
+        require(f'data-map-mode="{map_mode}"' in index, f"{map_mode} map mode is missing")
+    require(
+        all(label in index for label in ("平年値", "実況値", "予測値")),
+        "three-mode labels are incomplete",
+    )
+    require('mapMode: "recent"' in app_script, "default map mode must be recent observations")
+    require('recentPreset: "month"' in app_script, "default recent preset must be the past month")
+    require(
+        "state.recentStart = addDays(range.end, -29);" in app_script
+        and "state.recentEnd = range.end;" in app_script,
+        "default past-month period must be the latest inclusive 30 days",
+    )
+    require(
+        '["climate", "recent", "forecast"].includes(params.get("view"))' in app_script,
+        "share URLs must restore all three map modes",
+    )
+    require(
+        "state.mapMode === \"forecast\"" in app_script
+        and "elements.forecastControlsSection.hidden = !forecast;" in app_script
+        and "if (state.mapMode !== \"forecast\")" in app_script,
+        "forecast controls and overlays must remain forecast-mode-only",
+    )
+    require('id="forecastReadingGuide"' in index, "forecast-specific reading guide is missing")
     require('id="recentStart"' in index and 'id="recentEnd"' in index, "recent period date controls are missing")
     require('id="recentCenterSlider"' in index, "five-day center-date slider is missing")
     require("recentTemperaturePeriod(start, end)" in (site_root / "data.js").read_text(encoding="utf-8"), "recent period calculation is missing")
@@ -1165,6 +1188,9 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "recent_temperature_point_only": True,
         "recent_temperature_maximum_density_square_markers": True,
         "recent_temperature_beveled_markers": True,
+        "three_data_modes": True,
+        "default_recent_past_month": True,
+        "forecast_mode_separated": True,
     }
 
 
