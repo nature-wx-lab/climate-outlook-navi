@@ -1,6 +1,6 @@
 const START_VIEW = Object.freeze({
   center: [37.2, 137.2],
-  zoom: 5,
+  zoom: 6,
 });
 const BASES = {
   blank: {

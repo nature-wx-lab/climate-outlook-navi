@@ -1025,7 +1025,7 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require("./vendor/leaflet-1.9.4/leaflet.js" in index, "Leaflet must be locally vendored")
     require("unpkg.com" not in index, "external Leaflet CDN dependency remains")
     require("<h2>気候のものさし</h2>" not in index, "duplicate climate control heading remains")
-    require(re.search(r"zoom:\s*5\b", map_script) is not None, "start zoom must be 5")
+    require(re.search(r"zoom:\s*6\b", map_script) is not None, "start zoom must be 6")
     require("this.map.setView(START_VIEW.center, START_VIEW.zoom);" in map_script, "reset view must use the start view")
     require(
         'if (raw === null || raw.trim() === "") return null;' in app_script,
@@ -1141,7 +1141,7 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
         "text_files_scanned": scanned,
         "blocked_hits": len(hits),
         "local_leaflet": True,
-        "start_zoom": 5,
+        "start_zoom": 6,
         "duplicate_control_heading": False,
         "prefecture_boundary_only": True,
         "thin_prefecture_boundary": True,
