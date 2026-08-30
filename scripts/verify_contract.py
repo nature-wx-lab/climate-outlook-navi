@@ -669,6 +669,10 @@ def verify_recent_temperature(site_root: Path) -> dict[str, object]:
     require(dataset.get("element", {}).get("code") == "201", "recent-temperature element mismatch")
     validation = dataset.get("validation")
     require(isinstance(validation, dict), "recent-temperature validation missing")
+    require(
+        validation.get("observation_refresh_strategy") == "full_retention_window",
+        "recent-temperature refresh strategy mismatch",
+    )
     require(validation.get("minimum_valid_ratio") == 0.8, "recent-temperature missing-data threshold mismatch")
     require(
         validation.get("official_population_station_count")

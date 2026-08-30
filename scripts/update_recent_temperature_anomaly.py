@@ -73,8 +73,8 @@ ACCEPTED_QUALITY_CODES = {5, 8}
 MINIMUM_VALID_RATIO = 0.8
 MINIMUM_ACTIVE_STATIONS = 850
 MINIMUM_POPULATION_RATIO = 0.95
-MAX_INCREMENTAL_GAP_DAYS = 29
 OBSERVATION_BATCH_SIZE = 50
+OBSERVATION_REFRESH_STRATEGY = "full_retention_window"
 
 
 @dataclass(frozen=True)
@@ -556,9 +556,13 @@ def parse_obsdl(
     obsdl_ids: list[str],
     expected_dates: list[str],
 ) -> dict[str, list[int | None]]:
+    expected_date_set = set(expected_dates)
+    if len(expected_date_set) != len(expected_dates):
+        raise ValueError("expected OBS DL dates are not unique")
     values: dict[str, dict[str, int | None]] = {
         station_id: {} for station_id in obsdl_ids
     }
+    seen_dates: set[str] = set()
     for row in csv.reader(io.StringIO(raw.decode("cp932", errors="replace"))):
         if (
             not row
@@ -567,6 +571,11 @@ def parse_obsdl(
             continue
         year, month, day = (int(value) for value in row[0].split("/"))
         current = date(year, month, day).isoformat()
+        if current not in expected_date_set:
+            raise ValueError(f"unexpected OBS DL date row: {current}")
+        if current in seen_dates:
+            raise ValueError(f"duplicate OBS DL date row: {current}")
+        seen_dates.add(current)
         for index, station_id in enumerate(obsdl_ids):
             value_index = 1 + index * 3
             quality_index = value_index + 1
@@ -580,6 +589,12 @@ def parse_obsdl(
                 if quality in ACCEPTED_QUALITY_CODES
                 else None
             )
+    missing_dates = expected_date_set - seen_dates
+    if missing_dates:
+        raise ValueError(
+            f"missing OBS DL date rows ({len(missing_dates)}): "
+            f"{sorted(missing_dates)[:10]}"
+        )
     return {
         station_id: [values[station_id].get(current) for current in expected_dates]
         for station_id in obsdl_ids
@@ -733,39 +748,113 @@ def bootstrap_dataset(
     }
 
 
-def incremental_update(
+def reconcile_retained_observations(
     dataset: dict[str, Any],
     target_end: date,
     retention_days: int,
     request_delay: float,
     opener: urllib.request.OpenerDirector,
 ) -> bool:
-    existing_end = date.fromisoformat(dataset["dates"][-1])
-    if target_end <= existing_end:
-        return False
-    gap = (target_end - existing_end).days
-    if gap > MAX_INCREMENTAL_GAP_DAYS:
+    """Replace the retained observation window with a fresh official snapshot."""
+    existing_dates = dataset.get("dates")
+    if not isinstance(existing_dates, list) or not existing_dates:
+        raise ValueError("existing observation dates are missing")
+    parsed_dates = [date.fromisoformat(value) for value in existing_dates]
+    if any(
+        current - previous != timedelta(days=1)
+        for previous, current in zip(parsed_dates, parsed_dates[1:])
+    ):
+        raise ValueError("existing observation dates are not consecutive")
+    existing_end = parsed_dates[-1]
+    if target_end < existing_end:
         raise ValueError(
-            f"incremental gap is {gap} days; a full rebuild is required "
-            f"(maximum {MAX_INCREMENTAL_GAP_DAYS})"
+            f"official observation end moved backwards: {target_end} < {existing_end}"
         )
-    start = existing_end + timedelta(days=1)
+    # JMA daily observations can be completed or revised after their first
+    # publication. Re-fetch the complete public retention window on every run
+    # so a value that was initially missing (or later corrected) self-heals.
+    # Normals and station metadata remain cached; only observations are read
+    # again, keeping this substantially lighter than a full bootstrap.
+    start = target_end - timedelta(days=retention_days - 1)
+    refreshed_dates = iso_dates(start, target_end)
+    stations = dataset.get("stations")
+    if not isinstance(stations, list) or not stations:
+        raise ValueError("existing observation stations are missing")
+    obsdl_ids: list[str] = []
+    for station in stations:
+        obsdl_id = station.get("obsdl_id") if isinstance(station, dict) else None
+        observed = station.get("observed_tenths") if isinstance(station, dict) else None
+        if not isinstance(obsdl_id, str) or not obsdl_id:
+            raise ValueError("existing station has an invalid OBS DL ID")
+        if not isinstance(observed, list) or len(observed) != len(existing_dates):
+            raise ValueError(f"existing observation length mismatch: {obsdl_id}")
+        obsdl_ids.append(obsdl_id)
+    if len(set(obsdl_ids)) != len(obsdl_ids):
+        raise ValueError("existing station OBS DL IDs are not unique")
+
     observations = fetch_observations(
         opener,
-        [station["obsdl_id"] for station in dataset["stations"]],
+        obsdl_ids,
         start,
         target_end,
         request_delay,
     )
-    dataset["dates"].extend(iso_dates(start, target_end))
-    for station in dataset["stations"]:
-        station["observed_tenths"].extend(observations[station["obsdl_id"]])
-    trim = max(0, len(dataset["dates"]) - retention_days)
-    if trim:
-        dataset["dates"] = dataset["dates"][trim:]
-        for station in dataset["stations"]:
-            station["observed_tenths"] = station["observed_tenths"][trim:]
-    return True
+    refreshed_by_id: dict[str, list[int | None]] = {}
+    for obsdl_id in obsdl_ids:
+        refreshed = observations.get(obsdl_id)
+        if not isinstance(refreshed, list) or len(refreshed) != len(refreshed_dates):
+            raise ValueError(f"refreshed observation length mismatch: {obsdl_id}")
+        if any(
+            value is not None and not isinstance(value, int)
+            for value in refreshed
+        ):
+            raise ValueError(f"refreshed observation value mismatch: {obsdl_id}")
+        valid = sum(value is not None for value in refreshed)
+        if valid / len(refreshed_dates) < MINIMUM_VALID_RATIO:
+            raise ValueError(
+                f"refreshed observation coverage is too small: "
+                f"{obsdl_id} {valid}/{len(refreshed_dates)}"
+            )
+        refreshed_by_id[obsdl_id] = refreshed
+    existing_indexes = {value: index for index, value in enumerate(existing_dates)}
+    added_days = sum(value not in existing_indexes for value in refreshed_dates)
+    late_values = 0
+    revised_values = 0
+    withdrawn_values = 0
+    changed = existing_dates != refreshed_dates
+    for station in stations:
+        obsdl_id = station["obsdl_id"]
+        refreshed = refreshed_by_id[obsdl_id]
+        previous = station["observed_tenths"]
+        for new_index, current_date in enumerate(refreshed_dates):
+            old_index = existing_indexes.get(current_date)
+            if old_index is None:
+                continue
+            old_value = previous[old_index]
+            new_value = refreshed[new_index]
+            if old_value == new_value:
+                continue
+            changed = True
+            if old_value is None and new_value is not None:
+                late_values += 1
+            elif old_value is not None and new_value is None:
+                withdrawn_values += 1
+            else:
+                revised_values += 1
+        station["observed_tenths"] = refreshed
+    dataset["dates"] = refreshed_dates
+    print(json.dumps({
+        "observation_refresh_strategy": OBSERVATION_REFRESH_STRATEGY,
+        "refresh_start": refreshed_dates[0],
+        "refresh_end": refreshed_dates[-1],
+        "refresh_date_count": len(refreshed_dates),
+        "added_day_count": added_days,
+        "late_value_count": late_values,
+        "revised_value_count": revised_values,
+        "withdrawn_value_count": withdrawn_values,
+        "changed": changed,
+    }, ensure_ascii=False, indent=2))
+    return changed
 
 
 def normal_for_date(station: dict[str, Any], value: date) -> int | None:
@@ -844,6 +933,10 @@ def verify_latest_five_day(
             mismatches.append(f"{station['station_id']}:{actual}!={expected}")
     if compared < MINIMUM_ACTIVE_STATIONS:
         raise ValueError(f"too few latest five-day comparisons: {compared}")
+    if compared != len(official):
+        raise ValueError(
+            f"incomplete latest five-day comparisons: {compared}/{len(official)}"
+        )
     if mismatches:
         raise ValueError(
             f"latest five-day anomaly mismatches ({len(mismatches)}): "
@@ -914,6 +1007,7 @@ def write_dataset(
     official_values: dict[str, Decimal],
 ) -> None:
     dataset["validation"].update({
+        "observation_refresh_strategy": OBSERVATION_REFRESH_STRATEGY,
         "station_count": len(dataset["stations"]),
         "date_count": len(dataset["dates"]),
         "observation_start": dataset["dates"][0],
@@ -1086,14 +1180,18 @@ def main() -> None:
         return
 
     dataset = existing
-    changed = incremental_update(
+    changed = reconcile_retained_observations(
         dataset,
         target_end,
         args.retention_days,
         args.request_delay,
         opener,
     )
-    if changed:
+    metadata_changed = (
+        dataset["validation"].get("observation_refresh_strategy")
+        != OBSERVATION_REFRESH_STRATEGY
+    )
+    if changed or metadata_changed:
         write_dataset(
             dataset,
             args.retention_days,
