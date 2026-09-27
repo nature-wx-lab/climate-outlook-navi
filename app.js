@@ -91,7 +91,7 @@ const elements = Object.fromEntries([
   "windowOldValue", "windowNewValue", "differenceValue", "forecastRegion", "forecastPeriod",
   "probabilityBelowLabel", "probabilityNormalLabel", "probabilityAboveLabel",
   "probabilityBelow", "probabilityNormal", "probabilityAbove", "forecastNote", "copyLink",
-  "saveImage", "locate", "resetView", "notice", "settingsToggle", "settingsClose", "detailClose",
+  "saveImage", "resetView", "notice", "settingsToggle", "settingsClose", "detailClose", "detailToggle", "pointDetailPanel",
   "pointChartSection", "pointChartMeasure", "pointMonthlyChart", "pointChartCaption", "pointChartTableBody", "pointChartNote",
   "climateControlsSection", "climateControlsHeading", "climateControlsIntro", "recentControlsSection", "forecastControlsSection",
   "recentPresetControls", "recentStart", "recentEnd", "recentApply", "recentCenterField", "recentCenterSlider",
@@ -910,6 +910,7 @@ function renderRecentSelection() {
   const point = state.recentStation;
   document.body.classList.toggle("has-selection", Boolean(point));
   document.body.classList.remove("has-preview");
+  syncDetailToggle();
   if (!point) {
     elements.recentStationId.textContent = "地点を選択";
     elements.recentStationName.textContent = "地図の四角に触れると値を確認できます";
@@ -1247,6 +1248,7 @@ function renderSelected() {
   const record = selection?.record || null;
   document.body.classList.toggle("has-selection", Boolean(pinnedRecord));
   document.body.classList.toggle("has-preview", Boolean(preview));
+  syncDetailToggle();
   elements.pointUnpin.hidden = selection?.kind !== "pinned";
   elements.pointChartSection.hidden = selection?.kind !== "pinned" || !record;
 
@@ -1486,10 +1488,34 @@ async function switchElement(code) {
 
 let recentSliderFrame = null;
 
+function syncDetailToggle() {
+  const expanded = getComputedStyle(elements.pointDetailPanel).display !== "none";
+  const label = expanded ? "右パネルを収納" : "右パネルを表示";
+  elements.detailToggle.setAttribute("aria-expanded", String(expanded));
+  elements.detailToggle.setAttribute("aria-label", label);
+  elements.detailToggle.title = label;
+  elements.detailToggle.textContent = expanded ? "›" : "‹";
+}
+
+function setDetailPanelCollapsed(collapsed) {
+  document.body.classList.toggle("detail-collapsed", collapsed);
+  document.body.classList.toggle("detail-manually-open", !collapsed);
+  document.body.classList.remove("detail-mobile-closed");
+  syncDetailToggle();
+  requestAnimationFrame(() => map.invalidateSize());
+}
+
 function bindControls() {
   elements.settingsToggle.addEventListener("click", () => document.body.classList.toggle("settings-open"));
   elements.settingsClose.addEventListener("click", () => document.body.classList.remove("settings-open"));
-  elements.detailClose.addEventListener("click", () => document.body.classList.add("detail-mobile-closed"));
+  elements.detailClose.addEventListener("click", () => {
+    setDetailPanelCollapsed(true);
+    elements.detailToggle.focus();
+  });
+  elements.detailToggle.addEventListener("click", () => {
+    setDetailPanelCollapsed(elements.detailToggle.getAttribute("aria-expanded") === "true");
+  });
+  window.addEventListener("resize", syncDetailToggle);
   elements.pointUnpin.addEventListener("click", clearPinnedSelection);
   document.querySelectorAll("[data-map-mode]").forEach((button) => button.addEventListener("click", () => {
     switchMapMode(button.dataset.mapMode);
@@ -1614,30 +1640,6 @@ function bindControls() {
     updateForecast();
   });
   elements.resetView.addEventListener("click", () => map.resetView());
-  elements.locate.addEventListener("click", () => {
-    if (!navigator.geolocation) {
-      setNotice("このブラウザでは現在地を取得できません", "error");
-      return;
-    }
-    elements.locate.disabled = true;
-    setNotice("現在地を確認中…");
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      if (state.mapMode === "recent") {
-        map.setView(position.coords.latitude, position.coords.longitude, 8);
-        setNotice("現在地周辺へ移動しました", "ok");
-        elements.locate.disabled = false;
-        return;
-      }
-      const code = meshCodeFromLatLon(position.coords.latitude, position.coords.longitude);
-      const bounds = code ? meshBounds(code) : null;
-      if (bounds) await selectAtLatLon(bounds.centerLat, bounds.centerLon, null, { pan: true });
-      else setNotice("現在地を1kmメッシュへ変換できませんでした", "error");
-      elements.locate.disabled = false;
-    }, (error) => {
-      setNotice(`現在地を取得できませんでした: ${error.message}`, "error");
-      elements.locate.disabled = false;
-    }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
-  });
   elements.copyLink.addEventListener("click", async () => {
     const ok = await copyText(buildUrl().toString());
     setNotice(ok ? "表示状態のリンクをコピーしました" : "リンクをコピーできませんでした", ok ? "ok" : "error");

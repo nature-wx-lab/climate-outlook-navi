@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f7883'/%3E%3Cpath d='M17 44V20h7l16 15V20h7v24h-7L24 29v15z' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="./styles.css?v=20260821-three-modes1">
+  <link rel="stylesheet" href="./styles.css?v=20260927-map-layout1">
 </head>
 <body>
   <header class="topbar">
@@ -154,7 +154,6 @@
           </label>
         </div>
         <div class="action-grid">
-          <button id="locate" type="button">現在地</button>
           <button id="resetView" type="button">全国へ戻る</button>
         </div>
       </section>
@@ -192,7 +191,8 @@
       <div id="notice" class="notice" hidden></div>
     </section>
 
-    <aside class="detail-panel" aria-label="地点詳細">
+    <button id="detailToggle" class="detail-toggle" type="button" aria-controls="pointDetailPanel" aria-expanded="true" aria-label="右パネルを収納" title="右パネルを収納">›</button>
+    <aside id="pointDetailPanel" class="detail-panel" aria-label="地点詳細">
       <button id="detailClose" class="panel-close" type="button" aria-label="地点詳細を閉じる">×</button>
       <section id="recentDetailSection" class="recent-detail" hidden>
         <h2>観測地点の実況値</h2>
@@ -289,6 +289,6 @@
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260821-three-modes1"></script>
+  <script type="module" src="./app.js?v=20260927-map-layout1"></script>
 </body>
 </html>

@@ -82,11 +82,13 @@ button:disabled { cursor: wait; opacity: .58; }
 .x-mark { color: #fff; background: #060606; font-size: 13px; }
 
 .workspace {
+  --control-panel-width: 258px;
+  --detail-panel-width: 292px;
   position: relative;
   height: calc(100vh - 88px);
   min-height: 520px;
   display: grid;
-  grid-template-columns: 258px minmax(320px, 1fr) 292px;
+  grid-template-columns: var(--control-panel-width) minmax(320px, 1fr) var(--detail-panel-width);
   gap: 7px;
   padding: 7px;
 }
@@ -100,6 +102,27 @@ button:disabled { cursor: wait; opacity: .58; }
 }
 .control-panel { padding: 11px; }
 .detail-panel { padding: 12px; }
+body.detail-collapsed .workspace { grid-template-columns: var(--control-panel-width) minmax(320px, 1fr); }
+body.detail-collapsed .detail-panel { display: none; }
+.detail-toggle {
+  position: absolute;
+  z-index: 920;
+  top: 14px;
+  right: calc(var(--detail-panel-width) + 14px);
+  width: 28px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--accent-dark);
+  background: #fffffff5;
+  box-shadow: 0 2px 6px #18323d26;
+  font-size: 28px;
+  line-height: 1;
+}
+.detail-toggle:hover { background: #edf5f6; }
+.detail-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+body.detail-collapsed .detail-toggle { right: 14px; }
 .control-panel section + section, .detail-panel section + section {
   margin-top: 13px;
   padding-top: 12px;
@@ -227,7 +250,7 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
 .map-layer-settings input:disabled + output {
   opacity: .46;
 }
-.action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 8px; }
+.action-grid { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 8px; }
 .action-grid button { border-radius: 4px; }
 .date-range-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .wide-action {
@@ -288,6 +311,7 @@ select:disabled { color: #40545c; background: #edf2f4; opacity: 1; }
   font-weight: 800;
 }
 body.recent-view .map-info { max-width: calc(100% - 30px); }
+body.recent-view.detail-collapsed .map-info { max-width: calc(100% - 75px); }
 .climate-legend, .season-legend {
   position: absolute;
   z-index: 700;
@@ -449,7 +473,7 @@ footer {
 footer a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 2px; }
 
 @media (max-width: 1120px) {
-  .workspace { grid-template-columns: 220px minmax(300px, 1fr) 248px; }
+  .workspace { --control-panel-width: 220px; --detail-panel-width: 248px; grid-template-columns: var(--control-panel-width) minmax(300px, 1fr) var(--detail-panel-width); }
   .control-panel, .detail-panel { padding: 9px; }
   .point-chart-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
   .product-title p, .brand span { display: none; }
@@ -493,6 +517,8 @@ footer a { color: inherit; text-decoration-thickness: 1px; text-underline-offset
   }
   body.has-selection:not(.detail-mobile-closed) .detail-panel,
   body.has-preview:not(.detail-mobile-closed) .detail-panel { display: block; }
+  body.detail-manually-open:not(.detail-collapsed) .detail-panel { display: block; }
+  .detail-toggle, body.detail-collapsed .detail-toggle { top: 8px; right: 8px; width: 40px; }
   body.has-preview .detail-panel { pointer-events: none; }
   body.has-preview .detail-panel .panel-close { display: none; }
   .panel-close {
@@ -515,7 +541,7 @@ footer a { color: inherit; text-decoration-thickness: 1px; text-underline-offset
   .point-unpin { min-height: 40px; padding-inline: 10px; }
   .reading-guide { display: none; }
   .control-panel section + section { margin-top: 9px; padding-top: 8px; }
-  .map-info { left: 7px; right: 7px; flex-direction: column; align-items: stretch; gap: 1px; max-width: none; transform: none; padding: 5px 9px; white-space: normal; }
+  .map-info { left: 7px; right: 53px; flex-direction: column; align-items: stretch; gap: 1px; max-width: none; transform: none; padding: 5px 9px; white-space: normal; }
   .map-info strong, .map-info span { overflow: visible; text-overflow: clip; }
   .map-info strong { font-size: 11px; line-height: 1.2; }
   .map-info span { padding-left: 0; border-left: 0; font-size: 9px; line-height: 1.2; }
