@@ -3,6 +3,10 @@ const CLIMATE_ROOT = "./data/climate";
 const RECENT_TEMPERATURE_ROOT = "./data/recent-temperature";
 const EXPECTED_MESH_COUNT = 387717;
 
+export function todayInJapan(now = new Date()) {
+  return new Date(now.getTime() + 9 * 3600000).toISOString().slice(0, 10);
+}
+
 async function fetchJson(path) {
   const response = await fetch(path, { cache: "no-store" });
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
@@ -457,22 +461,30 @@ export class ClimateDataStore {
     } : null;
   }
 
-  recentTemperaturePeriod(start, end) {
+  recentTemperaturePeriod(start, end, today = todayInJapan()) {
     const dataset = this.recentTemperature;
     if (!dataset) throw new Error("最近の気温平年差データがありません");
-    const startIndex = dataset.dates.indexOf(start);
-    const endIndex = dataset.dates.indexOf(end);
-    if (startIndex < 0 || endIndex < startIndex) throw new Error("指定期間が収録範囲外です");
-    const expectedDays = endIndex - startIndex + 1;
+    const startDate = new Date(`${start}T00:00:00Z`);
+    const endDate = new Date(`${end}T00:00:00Z`);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(start || "")
+      || !/^\d{4}-\d{2}-\d{2}$/.test(end || "")
+      || !Number.isFinite(startDate.getTime()) || !Number.isFinite(endDate.getTime())
+      || startDate.toISOString().slice(0, 10) !== start
+      || endDate.toISOString().slice(0, 10) !== end
+      || start < dataset.dates[0] || start > end || end > today
+    ) throw new Error("開始日から日本時間の今日までの範囲で指定してください");
+    const expectedDays = Math.round((endDate - startDate) / 86400000) + 1;
     if (expectedDays > 93) throw new Error("指定期間は93日以内にしてください");
     const minimumValidRatio = Number(dataset.validation.minimum_valid_ratio || 0.8);
     const normalIndex = new Map(dataset.normal_days.map((value, index) => [value, index]));
-    const selectedDates = dataset.dates.slice(startIndex, endIndex + 1);
+    const dateIndexes = new Map(dataset.dates.map((value, index) => [value, index]));
+    const selectedDates = dataset.dates.filter((value) => value >= start && value <= end);
     const points = dataset.stations.flatMap((station) => {
       const observed = [];
       const dailyNormals = [];
-      selectedDates.forEach((dateText, offset) => {
-        const actual = station.observed_tenths[startIndex + offset];
+      selectedDates.forEach((dateText) => {
+        const actual = station.observed_tenths[dateIndexes.get(dateText)];
         const normal = station.normal_tenths[normalIndex.get(dateText.slice(5))];
         if (Number.isFinite(actual) && Number.isFinite(normal)) {
           observed.push(actual);
@@ -483,7 +495,7 @@ export class ClimateDataStore {
       const observedMean = observed.reduce((sum, value) => sum + value, 0) / observed.length / 10;
       let normalMean;
       let normalMethod = "daily";
-      if (expectedDays === 5 && observed.length === 5) {
+      if (expectedDays === 5) {
         const startNormalIndex = normalIndex.get(start.slice(5));
         const fiveDayNormal = station.normal_5day_tenths[startNormalIndex];
         if (!Number.isFinite(fiveDayNormal)) return [];
@@ -512,7 +524,12 @@ export class ClimateDataStore {
       start,
       end,
       expectedDays,
-      center: expectedDays === 5 ? dataset.dates[startIndex + 2] : null,
+      availableStart: selectedDates[0] || null,
+      availableEnd: selectedDates.at(-1) || null,
+      unavailableDays: expectedDays - selectedDates.length,
+      center: expectedDays === 5
+        ? new Date(startDate.getTime() + 2 * 86400000).toISOString().slice(0, 10)
+        : null,
       points,
     };
   }

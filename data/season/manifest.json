@@ -1,18 +1,18 @@
 {
   "schema_version": 2,
   "generator_version": "2.0.0",
-  "dataset_id": "ca63f21cfe85e3fe",
-  "generated_at": "2026-09-10T11:08:31+00:00",
-  "fetched_at": "2026-09-10T11:08:28+00:00",
+  "dataset_id": "dbc98ea13ccea7fd",
+  "generated_at": "2026-09-27T16:08:59+09:00",
+  "fetched_at": "2026-09-27T16:08:58+09:00",
   "status": "available",
   "files": {
     "latest": {
-      "path": "datasets/ca63f21cfe85e3fe/latest.json",
-      "bytes": 588135,
-      "sha256": "7654ef665a9389dda626d9e984fc2f9f70802a8d48bdde7626a4aedca1b51a24"
+      "path": "datasets/dbc98ea13ccea7fd/latest.json",
+      "bytes": 592690,
+      "sha256": "b77535fc741ac500663cb789d2276e42fb6f465bdfccd2cf690ffbd6fa228a37"
     },
     "regions": {
-      "path": "datasets/ca63f21cfe85e3fe/regions.geojson",
+      "path": "datasets/dbc98ea13ccea7fd/regions.geojson",
       "bytes": 417255,
       "sha256": "b3bff6c73e85b8c5161d7f9f9a5f0afa9fc6c3ad37c304370fd3b193f46ec35a",
       "feature_count": 385,
@@ -22,8 +22,8 @@
   "products": {
     "P1M": {
       "status": "available",
-      "report_datetime": "2026-09-10T14:30:00+09:00",
-      "target_datetime": "2026-09-12T00:00:00+09:00",
+      "report_datetime": "2026-09-24T14:30:00+09:00",
+      "target_datetime": "2026-09-26T00:00:00+09:00",
       "elements": {
         "temperature": {
           "status": "available",
@@ -55,14 +55,14 @@
         }
       },
       "source_url": "https://www.jma.go.jp/bosai/season/data/P1M.json",
-      "source_sha256": "a09ca0b11646d9d14a44ab037309c851d7bd6afb520c487e9ae920a01ebd462b",
-      "etag": "\"46bee51c8e6085f8ebb7eca4f3ce9c41\"",
-      "last_modified": "Thu, 10 Sep 2026 05:19:21 GMT"
+      "source_sha256": "d968b5830b02e675870b84374e3c0f4aa6043c11aa2f495452e409cb915c134c",
+      "etag": "\"765a4be622b02b2d301e40fb3051d8df\"",
+      "last_modified": "Thu, 24 Sep 2026 05:09:40 GMT"
     },
     "P3M": {
       "status": "available",
-      "report_datetime": "2026-08-25T14:00:00+09:00",
-      "target_datetime": "2026-09-01T00:00:00+09:00",
+      "report_datetime": "2026-09-18T14:00:00+09:00",
+      "target_datetime": "2026-10-01T00:00:00+09:00",
       "elements": {
         "temperature": {
           "status": "available",
@@ -94,9 +94,9 @@
         }
       },
       "source_url": "https://www.jma.go.jp/bosai/season/data/P3M.json",
-      "source_sha256": "1c480859fc4564d22d37ebd412f16c724341a1c697a22ad98e26f17952fd27ee",
-      "etag": "\"04a89c2f2bbdb0eaaa5ca66dc8be0ca9\"",
-      "last_modified": "Tue, 25 Aug 2026 04:35:47 GMT"
+      "source_sha256": "4efd12bf319917b1f49ec01037565d3d81880068f5cbd00f2b918671cc40a4e6",
+      "etag": "\"07c3b3cf19b6ee64b16dbf6c81ef3199\"",
+      "last_modified": "Fri, 18 Sep 2026 04:34:24 GMT"
     }
   },
   "boundaries": {

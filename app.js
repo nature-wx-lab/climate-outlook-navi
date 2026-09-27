@@ -1,4 +1,4 @@
-import { ClimateDataStore, meshBounds, meshCodeFromLatLon } from "./data.js?v=20260726-recent-temperature2";
+import { ClimateDataStore, meshBounds, meshCodeFromLatLon, todayInJapan } from "./data.js?v=20260927-today1";
 import { ClimateMap, TEMPERATURE_ANOMALY_LEGEND } from "./map.js?v=20260821-default-zoom1";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
@@ -95,7 +95,7 @@ const elements = Object.fromEntries([
   "pointChartSection", "pointChartMeasure", "pointMonthlyChart", "pointChartCaption", "pointChartTableBody", "pointChartNote",
   "climateControlsSection", "climateControlsHeading", "climateControlsIntro", "recentControlsSection", "forecastControlsSection",
   "recentPresetControls", "recentStart", "recentEnd", "recentApply", "recentCenterField", "recentCenterSlider",
-  "recentCenterLabel", "recentControlNote", "recentDetailSection", "selectedClimateSection",
+  "recentCenterLabel", "recentControlNote", "recentAvailability", "recentDetailSection", "selectedClimateSection",
   "selectedForecastSection", "climateReadingGuide", "forecastReadingGuide", "recentReadingGuide", "recentStationId",
   "recentStationName", "recentAnomalyValue", "recentPeriodLabel", "recentObservedMean",
   "recentNormalMean", "recentValidDays", "recentStationNote",
@@ -185,7 +185,7 @@ function parseIsoDate(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
   if (!match) return null;
   const parsed = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value ? null : parsed;
 }
 
 function isoDate(value) {
@@ -218,9 +218,10 @@ function formatSignedTemperature(value) {
 function recentPeriodText(result = state.recentResult) {
   if (!result) return "期間未選択";
   const range = `${formatIsoDate(result.start)}〜${formatIsoDate(result.end)}`;
-  return result.center
+  const period = result.center
     ? `${range}（中心 ${formatIsoDate(result.center)}）`
     : `${range}（${result.expectedDays}日間）`;
+  return result.unavailableDays ? `${period}・未取得${result.unavailableDays}日` : period;
 }
 
 function effectiveForecastStatus(product, productId) {
@@ -459,8 +460,9 @@ function optionalNumberParam(params, key) {
 function initializeRecentState() {
   const range = store.recentTemperatureRange();
   if (!range) throw new Error("最近の気温平年差の収録期間がありません");
-  state.recentStart = addDays(range.end, -29);
-  state.recentEnd = range.end;
+  const end = todayInJapan();
+  state.recentStart = addDays(end, -29);
+  state.recentEnd = end;
 }
 
 function inferRecentPreset(start, end) {
@@ -514,7 +516,7 @@ function parseInitialState() {
     parseIsoDate(recentStart)
     && parseIsoDate(recentEnd)
     && recentStart >= recentRange.start
-    && recentEnd <= recentRange.end
+    && recentEnd <= todayInJapan()
     && recentStart <= recentEnd
     && inclusiveDayCount(recentStart, recentEnd) <= 93
   ) {
@@ -558,15 +560,16 @@ function applyRecentControls() {
   const range = store.recentTemperatureRange();
   const dates = store.recentTemperature.dates;
   elements.recentStart.min = range.start;
-  elements.recentStart.max = range.end;
+  elements.recentStart.max = todayInJapan();
   elements.recentEnd.min = range.start;
-  elements.recentEnd.max = range.end;
+  elements.recentEnd.max = todayInJapan();
   elements.recentStart.value = state.recentStart;
   elements.recentEnd.value = state.recentEnd;
   document.querySelectorAll("[data-recent-preset]").forEach((button) => {
     button.classList.toggle("active", button.dataset.recentPreset === state.recentPreset);
   });
-  const isFiveDay = state.recentResult?.expectedDays === 5 || state.recentPreset === "5day";
+  const isFiveDay = (state.recentResult?.expectedDays === 5 || state.recentPreset === "5day")
+    && !state.recentResult?.unavailableDays;
   elements.recentCenterField.hidden = !isFiveDay;
   elements.recentCenterSlider.min = "2";
   elements.recentCenterSlider.max = String(dates.length - 3);
@@ -576,10 +579,15 @@ function applyRecentControls() {
     elements.recentCenterSlider.value = String(centerIndex);
   }
   elements.recentCenterLabel.textContent = formatIsoDate(center);
+  const unavailableDays = state.recentResult?.unavailableDays || 0;
+  elements.recentAvailability.hidden = !unavailableDays;
+  elements.recentAvailability.textContent = unavailableDays
+    ? `データは${formatIsoDate(range.end)}まで。指定期間の${unavailableDays}日分は未取得です。`
+    : "";
   elements.recentControlNote.textContent = [
     "5日は前後2日を含む計5日で、気象庁の「前3か月間の気温経過」と同じ中心日に合わせます。",
-    "過去1か月は最新日を含む直近30日です。",
-    `収録 ${formatIsoDate(range.start)}〜${formatIsoDate(range.end)}。任意期間は93日以内です。`,
+    "初期表示・過去1か月は日本時間の今日を含む直近30日です。",
+    "未取得分は埋めず、有効日が指定期間の8割以上ある地点を集計します。任意期間は93日以内です。",
   ].join(" ");
 }
 
@@ -959,7 +967,7 @@ function clearRecentSelection() {
 
 function setRecentPreset(preset) {
   const range = store.recentTemperatureRange();
-  const end = range.end;
+  const end = todayInJapan();
   state.recentPreset = preset;
   if (preset === "5day") {
     state.recentStart = addDays(range.latestCenter, -2);
@@ -1011,6 +1019,9 @@ function updateRecentTemperature() {
   renderRecentSelection();
   updateStatus();
   syncUrl();
+  if (!result.points.length) {
+    setNotice("指定期間に有効日数8割以上の地点がありません。未取得の日を含め、データ状況を確認してください。", "warn");
+  }
 }
 
 async function switchMapMode(mode) {
@@ -1116,9 +1127,10 @@ function updateStatus() {
       `観測 ${formatIsoDate(manifest.observation_start)}〜${formatIsoDate(manifest.observation_end)}`,
       `${manifest.station_count}地点`,
     ].join("｜");
-    elements.sourceDetailStatus.textContent = "気象台等とアメダスの全国観測地点値です。観測地点間を面的に補間していません。";
+    elements.sourceDetailStatus.textContent = "気象台等とアメダスの全国観測地点値です。未取得分は埋めず、有効日が指定期間の8割以上の地点を集計します。観測地点間は補間していません。";
     elements.mapInfoPrimary.textContent = `平均気温の平年差｜${recentPeriodText()}`;
-    elements.mapInfoSecondary.textContent = `${state.recentResult?.points.length || 0}/${manifest.station_count}地点｜1991–2020平年値`;
+    elements.mapInfoSecondary.textContent = `${state.recentResult?.points.length || 0}/${manifest.station_count}地点｜1991–2020平年値`
+      + (state.recentResult?.unavailableDays ? `｜データは${formatIsoDate(manifest.observation_end)}まで` : "");
     return;
   }
   if (state.mapMode === "climate") {
@@ -1528,8 +1540,8 @@ function bindControls() {
     const start = elements.recentStart.value;
     const end = elements.recentEnd.value;
     const days = parseIsoDate(start) && parseIsoDate(end) ? inclusiveDayCount(start, end) : 0;
-    if (!days || start < range.start || end > range.end || start > end) {
-      setNotice("収録範囲内で開始日と終了日を指定してください", "error");
+    if (!days || start < range.start || end > todayInJapan() || start > end) {
+      setNotice("開始日から日本時間の今日までの範囲で指定してください", "error");
       return;
     }
     if (days > 93) {

@@ -1132,9 +1132,11 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require('mapMode: "recent"' in app_script, "default map mode must be recent observations")
     require('recentPreset: "month"' in app_script, "default recent preset must be the past month")
     require(
-        "state.recentStart = addDays(range.end, -29);" in app_script
-        and "state.recentEnd = range.end;" in app_script,
-        "default past-month period must be the latest inclusive 30 days",
+        "const end = todayInJapan();" in app_script
+        and "state.recentStart = addDays(end, -29);" in app_script
+        and "state.recentEnd = end;" in app_script
+        and 'id="recentAvailability"' in index,
+        "default past-month period must end today in Japan and disclose unavailable days",
     )
     require(
         '["climate", "recent", "forecast"].includes(params.get("view"))' in app_script,
@@ -1149,7 +1151,7 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require('id="forecastReadingGuide"' in index, "forecast-specific reading guide is missing")
     require('id="recentStart"' in index and 'id="recentEnd"' in index, "recent period date controls are missing")
     require('id="recentCenterSlider"' in index, "five-day center-date slider is missing")
-    require("recentTemperaturePeriod(start, end)" in (site_root / "data.js").read_text(encoding="utf-8"), "recent period calculation is missing")
+    require("recentTemperaturePeriod(start, end, today = todayInJapan())" in (site_root / "data.js").read_text(encoding="utf-8"), "recent period calculation must support Japan's current date")
     require("normal_5day_tenths" in (site_root / "data.js").read_text(encoding="utf-8"), "official five-day normal routing is missing")
     require("setRecentTemperature(points, visible = true)" in map_script, "recent station map layer is missing")
     require(

@@ -879,7 +879,10 @@ def period_anomaly_tenths(
     expected = end_index - start_index + 1
     if len(observed) / expected < MINIMUM_VALID_RATIO:
         return None
-    if expected == 5 and len(observed) == 5:
+    if expected == 5:
+        # JMA compares a valid (possibly four-day) observed mean with the
+        # normal for the entire requested five-day period, not only the
+        # dates whose observations survived the quality filter.
         start_date = date.fromisoformat(dates[start_index])
         five_day_normal = station["normal_5day_tenths"][
             NORMAL_DAY_INDEX[start_date.strftime("%m-%d")]
@@ -1008,6 +1011,7 @@ def write_dataset(
 ) -> None:
     dataset["validation"].update({
         "observation_refresh_strategy": OBSERVATION_REFRESH_STRATEGY,
+        "five_day_normal_method": "official_full_period",
         "station_count": len(dataset["stations"]),
         "date_count": len(dataset["dates"]),
         "observation_start": dataset["dates"][0],
@@ -1190,6 +1194,8 @@ def main() -> None:
     metadata_changed = (
         dataset["validation"].get("observation_refresh_strategy")
         != OBSERVATION_REFRESH_STRATEGY
+        or dataset["validation"].get("five_day_normal_method")
+        != "official_full_period"
     )
     if changed or metadata_changed:
         write_dataset(

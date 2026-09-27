@@ -101,13 +101,14 @@
           <label>開始日<input id="recentStart" type="date"></label>
           <label>終了日<input id="recentEnd" type="date"></label>
         </div>
+        <p id="recentAvailability" class="micro-note" role="status" hidden></p>
         <button id="recentApply" class="wide-action" type="button">この期間を表示</button>
         <label id="recentCenterField" class="range-row">
           5日間の中心日
           <input id="recentCenterSlider" type="range" min="2" max="2" value="2">
           <span id="recentCenterLabel" class="range-caption">--</span>
         </label>
-        <p id="recentControlNote" class="micro-note">初期表示は最新日を含む過去30日です。任意期間は93日以内です。</p>
+        <p id="recentControlNote" class="micro-note">初期表示は日本時間の今日を含む過去30日です。未取得分は埋めず、有効日8割以上の地点を集計します。任意期間は93日以内です。</p>
       </section>
 
       <section>
@@ -277,7 +278,7 @@
         <h2>読み方</h2>
         <ol>
           <li>色は各観測地点の期間平均気温平年差</li>
-          <li>初期表示は最新日までの過去1か月</li>
+          <li>初期表示は今日までの過去1か月。未取得分は明示</li>
           <li>四角の間は補間せず、地点値として読む</li>
         </ol>
       </section>
@@ -289,6 +290,6 @@
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260927-map-layout1"></script>
+  <script type="module" src="./app.js?v=20260927-today1"></script>
 </body>
 </html>

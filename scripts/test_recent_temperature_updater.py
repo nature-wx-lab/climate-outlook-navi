@@ -163,7 +163,7 @@ class ObservationRefreshTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate OBS DL date row"):
             updater.parse_obsdl(duplicate, ["a0001"], expected)
 
-    def test_five_day_period_uses_valid_days_when_official_allows_one_gap(self) -> None:
+    def test_five_day_period_uses_full_period_normal_with_one_gap(self) -> None:
         normal = [0] * len(updater.NORMAL_DAYS)
         for day, value in zip(
             ("08-25", "08-26", "08-27", "08-28", "08-29"),
@@ -171,7 +171,7 @@ class ObservationRefreshTests(unittest.TestCase):
         ):
             normal[updater.NORMAL_DAY_INDEX[day]] = value
         five_day_normal = [0] * len(updater.NORMAL_DAYS)
-        five_day_normal[updater.NORMAL_DAY_INDEX["08-25"]] = 999
+        five_day_normal[updater.NORMAL_DAY_INDEX["08-25"]] = 130
         station = {
             "observed_tenths": [200, 220, None, 260, 280],
             "normal_tenths": normal,
@@ -186,7 +186,35 @@ class ObservationRefreshTests(unittest.TestCase):
         ]
         self.assertEqual(
             updater.period_anomaly_tenths(station, dates, 0, 4),
-            updater.Decimal("120"),
+            updater.Decimal("110"),
+        )
+
+    def test_memambetsu_missing_day_matches_official_five_day_anomaly(self) -> None:
+        dates = [f"2026-09-{day}" for day in range(21, 26)]
+        normal = [0] * len(updater.NORMAL_DAYS)
+        for day, value in zip(dates, (151, 149, 146, 144, 142)):
+            normal[updater.NORMAL_DAY_INDEX[day[5:]]] = value
+        five_day_normal = [0] * len(updater.NORMAL_DAYS)
+        five_day_normal[updater.NORMAL_DAY_INDEX["09-21"]] = 146
+        station = {
+            "observed_tenths": [189, 160, 156, 149, None],
+            "normal_tenths": normal,
+            "normal_5day_tenths": five_day_normal,
+        }
+        anomaly = updater.period_anomaly_tenths(station, dates, 0, 4)
+        self.assertEqual(anomaly, updater.Decimal("17.5"))
+        self.assertEqual(
+            (anomaly / 10).quantize(updater.Decimal("0.1"), rounding=updater.ROUND_HALF_UP),
+            updater.Decimal("1.8"),
+        )
+        station["observed_tenths"][0] = None
+        self.assertIsNone(updater.period_anomaly_tenths(station, dates, 0, 4))
+
+    def test_unreliable_daily_quality_is_not_promoted_to_valid(self) -> None:
+        raw = "2026/9/25,13.3,4,1\n2026/9/26,12.3,8,1\n".encode("cp932")
+        self.assertEqual(
+            updater.parse_obsdl(raw, ["a1460"], ["2026-09-25", "2026-09-26"]),
+            {"a1460": [None, 123]},
         )
 
 
