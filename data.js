@@ -435,10 +435,12 @@ export class ClimateDataStore {
   async useForecastEdition(product, id = "latest") {
     const sequence = this.editionSequence = (this.editionSequence || 0) + 1;
     const entries = this.forecastEditions(product);
-    const entry = id === "latest" ? entries[0] : entries.find((candidate) => candidate.id === id);
+    const current = this.seasonLatest.products?.[product] || null;
+    // Current official delivery wins over archive ordering, including corrections.
+    const entry = id === "latest" ? (current ? null : entries[0]) : entries.find((candidate) => candidate.id === id);
     if (id !== "latest" && !entry) throw new Error("この発表版は保存期間外、または未収録です");
     let regions = this.latestRegions;
-    let selected = this.seasonLatest.products?.[product] || null;
+    let selected = current;
     if (entry) {
       if (!this.editionCache.has(entry.id)) {
         const [edition, geometry] = await Promise.all([

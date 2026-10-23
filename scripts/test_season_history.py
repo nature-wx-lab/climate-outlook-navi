@@ -49,15 +49,16 @@ class ArchiveTests(unittest.TestCase):
                 report = season.add_months(now, -6).isoformat()
                 product = {"report_datetime": report, "target_datetime": report, "elements": {}, "status": "available"}
                 geometry = {"type": "FeatureCollection", "features": []}
-                source = {"P1M": {"source_sha256": "a" * 64}}
+                source = {"P1M": {"source_sha256": "f" * 64}}
                 season.archive_products(root, {"P1M": product}, geometry, source)
                 first = (root / "history/index.json").read_bytes()
                 season.archive_products(root, {"P1M": product}, geometry, source)
                 self.assertEqual(first, (root / "history/index.json").read_bytes())
-                source["P1M"]["source_sha256"] = "b" * 64
+                source["P1M"]["source_sha256"] = "a" * 64
                 season.archive_products(root, {"P1M": product}, geometry, source)
                 index = json.loads((root / "history/index.json").read_text())
                 self.assertEqual(len(index["editions"]), 2)
+                self.assertTrue(index["editions"][0]["id"].endswith("a" * 12))
                 self.assertNotEqual(index["editions"][0]["path"], index["editions"][1]["path"])
                 product["report_datetime"] = season.add_months(now, -13).isoformat()
                 source["P1M"]["source_sha256"] = "c" * 64

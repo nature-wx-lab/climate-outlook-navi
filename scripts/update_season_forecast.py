@@ -508,6 +508,7 @@ def archive_products(root: Path, products: dict[str, Any], regions: dict[str, An
             write_json(path, {"schema_version": 1, "product_id": name, "source_url": source.get("source_url", PRODUCT_URLS.get(name, PRODUCT_URLS["P6M"])),
                               "source_sha256": source_hash, "product": stable})
             entries[edition_id] = {"id": edition_id, "product": name, "report_datetime": product["report_datetime"],
+                                   "recorded_at": datetime.now(timezone.utc).isoformat(timespec="microseconds"),
                                    "target_datetime": product["target_datetime"], **file_entry(root, path), "regions": boundary_entry}
 
     if import_history:
@@ -529,7 +530,7 @@ def archive_products(root: Path, products: dict[str, Any], regions: dict[str, An
         retain(old_latest["products"], json.loads((root / old["files"]["regions"]["path"]).read_text()), old["products"])
     retain(products, regions, sources)
     retained = sorted((entry for entry in entries.values() if parse_datetime(entry["report_datetime"]) >= cutoff),
-                      key=lambda entry: (entry["report_datetime"], entry["id"]), reverse=True)
+                      key=lambda entry: (entry["report_datetime"], entry.get("recorded_at", ""), entry["id"]), reverse=True)
     atomic_json(index_path, {"schema_version": 1, "retention_months": 12, "editions": retained})
     referenced = {"history/index.json"} | {entry["path"] for entry in retained} | {entry["regions"]["path"] for entry in retained}
     for path in (root / "history").rglob("*"):
