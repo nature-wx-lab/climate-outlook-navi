@@ -12,6 +12,7 @@ import os
 import shutil
 import ssl
 import tempfile
+import subprocess
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -24,10 +25,11 @@ except ImportError:  # pragma: no cover - system CA remains the fallback
 
 
 SCHEMA_VERSION = 2
-GENERATOR_VERSION = "2.0.0"
+GENERATOR_VERSION = "3.0.0"
 PRODUCT_URLS = {
     "P1M": "https://www.jma.go.jp/bosai/season/data/P1M.json",
     "P3M": "https://www.jma.go.jp/bosai/season/data/P3M.json",
+    "P6M": "https://www.jma.go.jp/bosai/season/data/P6M.json",
 }
 REGIONS_URL = "https://www.jma.go.jp/bosai/common/const/geojson/class15s.json"
 AREA_URL = "https://www.jma.go.jp/bosai/common/const/area.json"
@@ -54,6 +56,8 @@ REGION_NAMES = {
 TERM_LABELS = {
     "P1M": ["向こう1か月", "第1週", "第2週", "第3～4週"],
     "P3M": ["向こう3か月", "第1か月", "第2か月", "第3か月"],
+    "WARM": ["夏（6～8月）", "梅雨の時期（奄美・沖縄は5～6月、その他は6～7月）"],
+    "COLD": ["冬（12～2月）"],
 }
 ELEMENTS = {
     "temperature": {"name": "気温", "classes": ["低い", "平年並", "高い"]},
@@ -62,6 +66,8 @@ ELEMENTS = {
     "snowfall": {"name": "降雪量", "classes": ["少ない", "平年並", "多い"]},
 }
 SUPPORTED_TERMS = {
+    "WARM": {"temperature": (0,), "precipitation": (0, 1), "sunshine": (), "snowfall": ()},
+    "COLD": {"temperature": (0,), "precipitation": (0,), "sunshine": (), "snowfall": (0,)},
     "P1M": {
         "temperature": (0, 1, 2, 3),
         "precipitation": (0,),
@@ -179,6 +185,18 @@ def normalize_triplet(value: Any, context: str) -> list[int] | None:
 
 def term_periods(product: str, payload: dict[str, Any]) -> list[dict[str, str]]:
     target = parse_datetime(payload["targetDatetime"])
+    if product in ("WARM", "COLD"):
+        if product == "WARM":
+            summer = target.replace(month=6, day=1)
+            rainy = target.replace(month=6, day=1)
+            spans = [(summer, add_months(summer, 3) - timedelta(days=1)),
+                     (rainy, add_months(rainy, 2) - timedelta(days=1))]
+        else:
+            winter = target.replace(month=12, day=1)
+            spans = [(winter, add_months(winter, 3) - timedelta(days=1))]
+        return [{"id": str(index), "label": TERM_LABELS[product][index],
+                 "start": start.isoformat(), "end": end.replace(hour=23, minute=59, second=59).isoformat()}
+                for index, (start, end) in enumerate(spans)]
     time_defines = [parse_datetime(value) for value in payload["timeDefines"]]
     if len(time_defines) != 3 or time_defines != sorted(time_defines):
         raise ValueError(f"{product} timeDefines must contain three ascending datetimes")
@@ -265,11 +283,15 @@ def build_element(
                     "forecast_region_name": REGION_NAMES[forecast_code],
                     "probabilities": triplet,
                 }
+                if product == "WARM" and term_index == 1 and forecast_code in ("011002", "011100"):
+                    start = parse_datetime(periods[term_index]["start"]).replace(month=5)
+                    resolved[class15_code].update(start=start.isoformat(), end=(add_months(start, 2) - timedelta(seconds=1)).isoformat())
         # JMA publishes temperature, precipitation and sunshine as nationwide
         # class15 coverage.  Snowfall is different: during the issue season the
         # official map colors only the forecast regions for which snowfall
         # probabilities are supplied, so partial class15 coverage is valid.
-        if element != "snowfall" and resolved and len(resolved) != 376:
+        partial = element == "snowfall" or (product == "WARM" and element == "precipitation" and term_index == 1)
+        if not partial and resolved and len(resolved) != 376:
             raise ValueError(
                 f"{product}.{element} term {term_index} resolves {len(resolved)} class15 codes, expected 376"
             )
@@ -303,10 +325,13 @@ def validate_product(product: str, payload: dict[str, Any], recipes: dict[str, l
         *ELEMENTS,
         "reportDatetime", "targetDatetime", "targetDuration", "timeDefines", "durationType",
     }
+    if product in ("WARM", "COLD"):
+        required.discard("timeDefines")
     missing = required - payload.keys()
     if missing:
         raise ValueError(f"{product} missing fields: {sorted(missing)}")
-    if payload["targetDuration"] != product:
+    expected_duration = {"WARM": "P6M", "COLD": "P5M"}.get(product, product)
+    if payload["targetDuration"] != expected_duration:
         raise ValueError(f"Unexpected targetDuration for {product}: {payload['targetDuration']}")
     parse_datetime(payload["reportDatetime"])
     periods = term_periods(product, payload)
@@ -320,7 +345,7 @@ def validate_product(product: str, payload: dict[str, Any], recipes: dict[str, l
     end = parse_datetime(periods[0]["end"])
     report = parse_datetime(payload["reportDatetime"])
     now = datetime.now(timezone.utc).astimezone(end.tzinfo)
-    maximum_report_age_days = 9 if product == "P1M" else 45
+    maximum_report_age_days = 9 if product == "P1M" else 45 if product == "P3M" else 366
     report_age_days = (now - report).total_seconds() / 86_400
     status = "available" if now <= end and report_age_days <= maximum_report_age_days else "stale"
     return {
@@ -328,7 +353,7 @@ def validate_product(product: str, payload: dict[str, Any], recipes: dict[str, l
         "target_datetime": payload["targetDatetime"],
         "target_duration": payload["targetDuration"],
         "duration_type": payload["durationType"],
-        "time_defines": payload["timeDefines"],
+        "time_defines": payload.get("timeDefines") or [],
         "status": status,
         "freshness": {
             "method": "target-period-and-conservative-report-age",
@@ -343,6 +368,16 @@ def write_json(path: Path, payload: object) -> bytes:
     raw = (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(raw)
+    return raw
+
+
+def atomic_json(path: Path, payload: object) -> bytes:
+    raw = (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("wb", dir=path.parent, delete=False) as handle:
+        handle.write(raw)
+        temporary = Path(handle.name)
+    os.replace(temporary, path)
     return raw
 
 
@@ -439,6 +474,70 @@ def sanitize_regions(payload: dict[str, Any]) -> dict[str, Any]:
     return {"type": "FeatureCollection", "features": sanitized_features}
 
 
+def file_entry(root: Path, path: Path) -> dict[str, Any]:
+    raw = path.read_bytes()
+    return {"path": path.relative_to(root).as_posix(), "bytes": len(raw), "sha256": sha256_bytes(raw)}
+
+
+def archive_products(root: Path, products: dict[str, Any], regions: dict[str, Any],
+                     sources: dict[str, Any], *, import_history: bool = False) -> dict[str, Any]:
+    """Keep immutable issue/revision files for a rolling calendar year."""
+    index_path = root / "history/index.json"
+    index = json.loads(index_path.read_text()) if index_path.is_file() else {"schema_version": 1, "retention_months": 12, "editions": []}
+    entries = {entry["id"]: entry for entry in index["editions"]}
+    cutoff = add_months(datetime.now(timezone.utc), -12)
+
+    def retain(bundle: dict[str, Any], geometry: dict[str, Any], provenance: dict[str, Any]) -> None:
+        geometry_raw = (json.dumps(geometry, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
+        geometry_path = root / f"history/boundaries/{sha256_bytes(geometry_raw)[:16]}.geojson"
+        if not geometry_path.exists():
+            write_json(geometry_path, geometry)
+        boundary_entry = file_entry(root, geometry_path)
+        for name, product in bundle.items():
+            if name not in SUPPORTED_TERMS or parse_datetime(product["report_datetime"]) < cutoff:
+                continue
+            source = provenance.get(name, {})
+            stable = json.loads(json.dumps(product))
+            stable["status"] = "available"
+            stable.get("freshness", {}).pop("report_age_days_at_generation", None)
+            source_hash = source.get("source_sha256") or sha256_bytes(json.dumps(stable, sort_keys=True).encode())
+            edition_id = f"{name}-{parse_datetime(product['report_datetime']).strftime('%Y%m%dT%H%M')}-{source_hash[:12]}"
+            if edition_id in entries:
+                continue
+            path = root / f"history/issues/{edition_id}.json"
+            write_json(path, {"schema_version": 1, "product_id": name, "source_url": source.get("source_url", PRODUCT_URLS.get(name, PRODUCT_URLS["P6M"])),
+                              "source_sha256": source_hash, "product": stable})
+            entries[edition_id] = {"id": edition_id, "product": name, "report_datetime": product["report_datetime"],
+                                   "target_datetime": product["target_datetime"], **file_entry(root, path), "regions": boundary_entry}
+
+    if import_history:
+        repo = Path(__file__).resolve().parents[1]
+        commits = subprocess.check_output(["git", "log", f"--since={cutoff.date().isoformat()}", "--format=%H", "--", "data/season/manifest.json"], cwd=repo, text=True).splitlines()
+        for commit in reversed(commits):
+            def historical(path: str) -> Any:
+                return json.loads(subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=repo))
+            manifest = historical("data/season/manifest.json")
+            latest = historical("data/season/" + manifest["files"]["latest"]["path"])
+            if latest.get("schema_version") != 2:
+                continue
+            retain(latest["products"], historical("data/season/" + manifest["files"]["regions"]["path"]), manifest["products"])
+    # Capture the existing public issue before replacing it, even on first migration.
+    manifest_path = root / "manifest.json"
+    if manifest_path.is_file():
+        old = json.loads(manifest_path.read_text())
+        old_latest = json.loads((root / old["files"]["latest"]["path"]).read_text())
+        retain(old_latest["products"], json.loads((root / old["files"]["regions"]["path"]).read_text()), old["products"])
+    retain(products, regions, sources)
+    retained = sorted((entry for entry in entries.values() if parse_datetime(entry["report_datetime"]) >= cutoff),
+                      key=lambda entry: (entry["report_datetime"], entry["id"]), reverse=True)
+    atomic_json(index_path, {"schema_version": 1, "retention_months": 12, "editions": retained})
+    referenced = {"history/index.json"} | {entry["path"] for entry in retained} | {entry["regions"]["path"] for entry in retained}
+    for path in (root / "history").rglob("*"):
+        if path.is_file() and path.relative_to(root).as_posix() not in referenced:
+            path.unlink()
+    return file_entry(root, index_path)
+
+
 def update(args: argparse.Namespace) -> dict[str, Any]:
     output_root = Path(args.output).resolve()
     manifest_path = output_root / "manifest.json"
@@ -456,6 +555,8 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
     source_hashes: dict[str, str] = {}
     for product, url in PRODUCT_URLS.items():
         payload, headers, raw = fetch_json(url, args.timeout)
+        if product == "P6M":
+            product = "WARM" if parse_datetime(payload["reportDatetime"]).month in (2, 3, 4) else "COLD"
         products_raw[product] = payload
         source_headers[product] = headers
         source_hashes[product] = sha256_bytes(raw)
@@ -484,19 +585,22 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
 
     products = {product: validate_product(product, payload, recipes) for product, payload in products_raw.items()}
     if previous_manifest and not args.allow_report_regression:
-        for product in ("P1M", "P3M"):
+        for product in products:
             previous_report = previous_manifest.get("products", {}).get(product, {}).get("report_datetime")
             if previous_report and parse_datetime(products[product]["report_datetime"]) < parse_datetime(previous_report):
                 raise ValueError(f"{product} reportDatetime regressed; refusing to replace the last-known-good dataset")
     report_key = "|".join([
         GENERATOR_VERSION,
-        *(products[product]["report_datetime"] for product in ("P1M", "P3M")),
-        *(products[product]["status"] for product in ("P1M", "P3M")),
-        *(source_hashes[product] for product in ("P1M", "P3M")),
+        *(products[product]["report_datetime"] for product in products),
+        *(products[product]["status"] for product in products),
+        *(source_hashes[product] for product in products),
         sha256_bytes(regions_raw),
         sha256_bytes(area_raw),
     ])
     dataset_id = hashlib.sha256(report_key.encode("utf-8")).hexdigest()[:16]
+    archive_entry = archive_products(output_root, products, sanitized_regions,
+        {name: {"source_url": PRODUCT_URLS.get(name, PRODUCT_URLS["P6M"]), "source_sha256": source_hashes[name]} for name in products},
+        import_history=args.import_git_history)
     final_dataset_dir = output_root / "datasets" / dataset_id
     if final_dataset_dir.is_dir() and manifest_path.is_file():
         current_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -511,7 +615,11 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
                 and sha256_bytes(latest_path.read_bytes()) == latest_entry.get("sha256")
                 and sha256_bytes(regions_path.read_bytes()) == regions_entry.get("sha256")
             ):
-                current_manifest["changed"] = False
+                archive_changed = current_manifest["files"].get("archive") != archive_entry
+                current_manifest["files"]["archive"] = archive_entry
+                if archive_changed:
+                    atomic_json(manifest_path, current_manifest)
+                current_manifest["changed"] = archive_changed
                 current_manifest["removed_dataset_ids"] = prune_datasets(output_root, dataset_id, args.keep_datasets)
                 return current_manifest
     staging_parent.mkdir(parents=True, exist_ok=True)
@@ -546,6 +654,7 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
             "fetched_at": fetched_at,
             "status": "available" if all(product["status"] == "available" for product in products.values()) else "stale",
             "files": {
+                "archive": archive_entry,
                 "latest": {
                     "path": f"datasets/{dataset_id}/latest.json",
                     "bytes": len(latest_bytes),
@@ -577,12 +686,12 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
                         }
                         for element in ELEMENTS
                     },
-                    "source_url": PRODUCT_URLS[product],
+                    "source_url": PRODUCT_URLS.get(product, PRODUCT_URLS["P6M"]),
                     "source_sha256": source_hashes[product],
                     "etag": source_headers[product]["etag"],
                     "last_modified": source_headers[product]["last_modified"],
                 }
-                for product in PRODUCT_URLS
+                for product in products
             },
             "boundaries": {
                 "source_url": REGIONS_URL,
@@ -610,6 +719,7 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
                 },
                 "duplicate_geometry_codes_preserved": len(features) - len(unique_codes),
                 "dataset_retention": args.keep_datasets,
+                "archive_retention_months": 12,
             },
         }
         output_root.mkdir(parents=True, exist_ok=True)
@@ -641,6 +751,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="data/season")
     parser.add_argument("--timeout", type=int, default=30)
+    parser.add_argument("--import-git-history", action="store_true", help="import available verified forecast editions from this repository's last year")
     parser.add_argument(
         "--allow-report-regression",
         action="store_true",

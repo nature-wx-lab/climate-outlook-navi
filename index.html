@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f7883'/%3E%3Cpath d='M17 44V20h7l16 15V20h7v24h-7L24 29v15z' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="./styles.css?v=20260927-map-layout1">
+  <link rel="stylesheet" href="./styles.css?v=20261023-season-history1">
 </head>
 <body>
   <header class="topbar">
@@ -54,17 +54,20 @@
         <div class="segmented three mode-switcher" id="mapModeControls">
           <button data-map-mode="climate" type="button" title="1kmメッシュの気候統計を見る">平年値</button>
           <button class="active" data-map-mode="recent" type="button" title="過去の観測値を期間平均して平年と比べる">実況値</button>
-          <button data-map-mode="forecast" type="button" title="この先の季節予報を平年と比べる">予測値</button>
+          <button data-map-mode="forecast" type="button" title="気象庁季節予報の地域確率・発表履歴を見る">予測値</button>
         </div>
       </section>
 
       <section id="forecastControlsSection" hidden>
-        <h2>この先の予測値</h2>
-        <p class="section-intro">気象庁の季節予報を、公式の予報地域ごとに表示します。</p>
+        <h2>季節予報・発表履歴</h2>
+        <p class="section-intro">気象庁の地域区分・確率をそのまま地図化。発表日から1年間の履歴を切り替えます。</p>
         <label class="check-row"><input id="forecastToggle" type="checkbox" checked><span>季節予報の地域を表示</span></label>
-        <label id="forecastProductField">予報<select id="forecastProduct"><option value="P1M">1か月予報</option><option value="P3M">3か月予報</option></select></label>
+        <label id="forecastProductField">予報<select id="forecastProduct"><option value="P1M">1か月予報</option><option value="P3M">3か月予報</option><option value="WARM">暖候期予報</option><option value="COLD">寒候期予報</option></select></label>
+        <label>発表日<select id="forecastEdition"><option value="latest">最新の発表</option></select></label>
+        <p id="forecastEditionNote" class="micro-note" role="status"></p>
+        <label>予報要素<select id="forecastElement"><option value="201">気温</option><option value="101">降水量</option><option value="401">日照時間</option><option value="503">降雪量</option></select></label>
         <label id="forecastTermField">対象期間<select id="forecastTerm"></select></label>
-        <label id="forecastOpacityField" class="range-row">地域面の濃さ<input id="forecastOpacity" type="range" min="8" max="55" value="28"></label>
+        <label id="forecastOpacityField" class="range-row">地域面の濃さ<input id="forecastOpacity" type="range" min="5" max="100" value="85"></label>
         <p id="forecastControlNote" class="micro-note">色は地域内で最も確率が高い階級。確率値を平年値へ足したり、1kmへ補間したりしません。</p>
       </section>
 
@@ -248,6 +251,7 @@
 
       <section id="selectedForecastSection" class="selected-forecast" hidden>
         <h2>この地域の季節予報</h2>
+        <button id="forecastUnpin" type="button" hidden>地域の固定を解除</button>
         <strong id="forecastRegion">地域レイヤ上で地点をクリック</strong>
         <p id="forecastPeriod">対象期間を読み込み中</p>
         <div class="probability-grid">
@@ -270,9 +274,10 @@
         <h2>読み方</h2>
         <ol>
           <li>地域予報の3確率で、この先の傾向を見る</li>
-          <li>比較用の1km平年面は予報と異なる空間単位</li>
+          <li>発表日と予報対象期間を分けて確認する</li>
           <li>確率は偏差量や地点の数値予報ではない</li>
         </ol>
+        <p class="micro-note">出典：<a href="https://www.jma.go.jp/bosai/season/" target="_blank" rel="noopener">気象庁「季節予報」</a>。気象庁公表の地域別確率をNature Wx Labが地図化。予報値・予報地域は変更していません。</p>
       </section>
       <section id="recentReadingGuide" class="reading-guide" hidden>
         <h2>読み方</h2>
@@ -286,10 +291,15 @@
   </main>
 
   <footer>
-    平年値：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。実況値：<a href="https://www.data.jma.go.jp/stats/mdrr/normal/index.html" target="_blank" rel="noopener noreferrer">気象庁2020年平年値</a>と日平均気温から独自集計した気象台等・アメダスの観測地点値。地点間は補間していません。予測値：気象庁1か月予報・3か月予報の地域確率。地図・詳細地図・地形：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院「地理院タイル」</a>。色別標高図の海域部は海上保安庁海洋情報部の資料を使用して作成。
+    平年値：気象庁観測と<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-G04-a.html" target="_blank" rel="noopener noreferrer">国土数値情報G04-a（国土交通省）</a>をもとに独自算出・独自内挿した1km面。実況値：<a href="https://www.data.jma.go.jp/stats/mdrr/normal/index.html" target="_blank" rel="noopener noreferrer">気象庁2020年平年値</a>と日平均気温から独自集計した気象台・アメダスの観測地点値。地点間は補間していません。予測値：気象庁1か月・3か月・暖候期・寒候期予報の地域確率を独自に地図化。
+    <details id="mapSources"><summary>地図の出典・加工表示</summary>
+      地図・詳細地図・地形：<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院「地理院タイル」</a>。白地図は淡色地図をNature Wx Labが減彩・明度調整。色別標高図の海域部は海上保安庁海洋情報部の資料を使用して作成。
+      <p>淡色・標準地図の小縮尺部：Shoreline data is derived from: United States. National Imagery and Mapping Agency. "Vector Map Level 0 (VMAP0)." Bethesda, MD: Denver, CO: The Agency; USGS Information Services, 1997.</p>
+      <p>標準地図の小縮尺部：The bathymetric contours are derived from those contained within the GEBCO Digital Atlas, published by the BODC on behalf of IOC and IHO (2003) (https://www.gebco.net). 海上保安庁許可第292502号（水路業務法第25条に基づく類似刊行物）。</p>
+    </details>
   </footer>
 
   <script src="./vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script type="module" src="./app.js?v=20260927-today1"></script>
+  <script type="module" src="./app.js?v=20261023-season-history1"></script>
 </body>
 </html>

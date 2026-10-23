@@ -860,7 +860,9 @@ def verify_season_v2(
 
     probability_triplets = 0
     available_terms = 0
-    for product_name in ("P1M", "P3M"):
+    require({"P1M", "P3M"} <= products.keys(), "primary seasonal products missing")
+    require(set(products) <= {"P1M", "P3M", "WARM", "COLD"}, "unknown seasonal product")
+    for product_name in products:
         product = products.get(product_name)
         product_summary = manifest_products.get(product_name)
         support = supported_terms.get(product_name)
@@ -907,7 +909,7 @@ def verify_season_v2(
                     term.get("regions"),
                     f"{product_name}.{element}[{expected_index}]",
                     boundary_codes,
-                    require_full_coverage=element != "snowfall",
+                    require_full_coverage=element != "snowfall" and not (product_name == "WARM" and element == "precipitation" and expected_index == 1),
                 )
                 if region_count:
                     require(
@@ -978,6 +980,28 @@ def verify_season(site_root: Path) -> dict[str, int | bool | str]:
     require(len(dataset_dirs) <= retention, "unreferenced season datasets exceed retention")
     require(latest_path.parent in dataset_dirs, "active season dataset directory missing")
     expected_files = {Path("manifest.json")}
+    if "archive" in manifest["files"]:
+        archive_entry = manifest["files"]["archive"]
+        archive_path = root / archive_entry["path"]
+        require(sha256_path(archive_path) == archive_entry["sha256"], "archive index checksum mismatch")
+        expected_files.add(Path(archive_entry["path"]))
+        archive = json.loads(archive_path.read_text())
+        require(archive["retention_months"] == 12, "archive must retain one year")
+        ids = set()
+        for entry in archive["editions"]:
+            require(entry["id"] not in ids, "duplicate forecast edition")
+            ids.add(entry["id"])
+            for asset in (entry, entry["regions"]):
+                relative = PurePosixPath(asset["path"])
+                require(not relative.is_absolute() and ".." not in relative.parts and relative.parts[0] == "history", "unsafe archive path")
+                path = root / relative
+                require(path.stat().st_size == asset["bytes"] and sha256_path(path) == asset["sha256"], "forecast archive asset mismatch")
+                expected_files.add(Path(relative))
+            edition = json.loads((root / entry["path"]).read_text())
+            require(edition["product_id"] == entry["product"] and edition["product"]["report_datetime"] == entry["report_datetime"], "edition identity mismatch")
+            for element in edition["product"]["elements"].values():
+                for term in element["terms"]:
+                    verify_probability_regions(term["regions"], entry["id"], {feature["properties"]["code"] for feature in regions["features"]}, require_full_coverage=False)
     for dataset_dir in dataset_dirs:
         dataset_relative = dataset_dir.relative_to(root)
         expected_files.add(dataset_relative / "latest.json")

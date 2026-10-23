@@ -714,25 +714,48 @@ export class ClimateMap {
       "季節予報：気象庁・地域確率｜灰色＝同率首位",
     ])];
     detailLines.push("地図：地理院タイル（国土地理院）");
+    if (this.baseId === "blank") detailLines.push("白地図：地理院タイル（淡色地図）をNature Wx Labが減彩・明度調整");
+    detailLines.push('Shoreline data is derived from: United States. National Imagery and Mapping Agency. "Vector Map Level 0 (VMAP0)." Bethesda, MD: Denver, CO: The Agency; USGS Information Services, 1997.');
+    if (this.baseId === "standard" || this.detailMapLayer) {
+      detailLines.push("The bathymetric contours are derived from those contained within the GEBCO Digital Atlas, published by the BODC on behalf of IOC and IHO (2003) (https://www.gebco.net).");
+      detailLines.push("海上保安庁許可第292502号（水路業務法第25条に基づく類似刊行物）");
+    }
     if (this.terrainLayer && this.terrainStyle === "color") {
       detailLines.push("色別標高図の海域部：海上保安庁海洋情報部資料");
     }
     const detailWidth = Math.min(520, rect.width - 28);
-    const detailHeight = 16 + detailLines.length * 14;
+    context.font = "10px -apple-system, BlinkMacSystemFont, sans-serif";
+    const wrappedDetails = detailLines.flatMap((line) => wrapCanvasText(context, line, detailWidth - 20));
+    const detailHeight = 16 + wrappedDetails.length * 14;
     const detailY = rect.height - detailHeight - 14;
     context.fillStyle = "rgba(255,255,255,.94)";
     roundRect(context, 14, detailY, detailWidth, detailHeight, 6);
     context.fill();
     context.fillStyle = "#30444d";
     context.font = "10px -apple-system, BlinkMacSystemFont, sans-serif";
-    detailLines.forEach((line, index) => {
-      context.fillText(fitCanvasText(context, line, detailWidth - 20), 24, detailY + 18 + index * 14);
+    wrappedDetails.forEach((line, index) => {
+      context.fillText(line, 24, detailY + 18 + index * 14);
     });
 
     const legend = payload.legend;
     const legendWidth = 118;
     const legendX = rect.width - legendWidth - 14;
     const legendY = rect.width >= 780 ? 14 : 14 + titleHeight + 12;
+    if (legend.categories) {
+      context.fillStyle = "rgba(255,255,255,.94)";
+      roundRect(context, legendX, legendY, legendWidth, 36 + legend.categories.length * 24, 6);
+      context.fill();
+      context.font = "700 11px sans-serif";
+      context.fillStyle = "#18323d";
+      context.fillText(legend.title, legendX + 10, legendY + 20);
+      legend.categories.forEach((label, index) => {
+        context.fillStyle = legend.colors[index];
+        context.fillRect(legendX + 10, legendY + 32 + index * 24, 16, 14);
+        context.fillStyle = "#18323d";
+        context.fillText(label, legendX + 32, legendY + 44 + index * 24);
+      });
+      return imageToBlob(canvas);
+    }
     let legendHeadingFontSize = 10;
     context.font = `700 ${legendHeadingFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
     const fullLegendHeading = `${legend.title}（${legend.unit}）`;

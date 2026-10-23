@@ -238,6 +238,9 @@ export class ClimateDataStore {
     this.climateBase = "";
     this.seasonManifest = null;
     this.seasonLatest = null;
+    this.seasonArchive = { editions: [] };
+    this.selectedSeasonProducts = new Map();
+    this.editionCache = new Map();
     this.regions = null;
     this.regionIndex = [];
     this.chunkCache = new Map();
@@ -292,6 +295,10 @@ export class ClimateDataStore {
       throw new Error("季節予報データ契約が一致しません");
     }
     this.seasonLatest = seasonLatest;
+    this.latestRegions = regions;
+    if (seasonManifest.files.archive) {
+      this.seasonArchive = await fetchJson(`./data/season/${seasonManifest.files.archive.path}?v=${seasonManifest.files.archive.sha256}`);
+    }
     this.regions = regions;
     if (
       recentTemperature.schema_version !== 2
@@ -418,7 +425,39 @@ export class ClimateDataStore {
   }
 
   forecastProduct(product) {
-    return this.seasonLatest.products?.[product] || null;
+    return this.selectedSeasonProducts.get(product) || this.seasonLatest.products?.[product] || null;
+  }
+
+  forecastEditions(product) {
+    return this.seasonArchive.editions.filter((entry) => entry.product === product);
+  }
+
+  async useForecastEdition(product, id = "latest") {
+    const sequence = this.editionSequence = (this.editionSequence || 0) + 1;
+    const entries = this.forecastEditions(product);
+    const entry = id === "latest" ? entries[0] : entries.find((candidate) => candidate.id === id);
+    if (id !== "latest" && !entry) throw new Error("この発表版は保存期間外、または未収録です");
+    let regions = this.latestRegions;
+    let selected = this.seasonLatest.products?.[product] || null;
+    if (entry) {
+      if (!this.editionCache.has(entry.id)) {
+        const [edition, geometry] = await Promise.all([
+          fetchJson(`./data/season/${entry.path}?v=${entry.sha256}`),
+          fetchJson(`./data/season/${entry.regions.path}?v=${entry.regions.sha256}`),
+        ]);
+        if (edition.product_id !== product || edition.product.report_datetime !== entry.report_datetime) throw new Error("発表版が一致しません");
+        this.editionCache.set(entry.id, { product: edition.product, regions: geometry });
+      }
+      const cached = this.editionCache.get(entry.id);
+      selected = cached.product;
+      regions = cached.regions;
+    }
+    if (sequence !== this.editionSequence) return false;
+    if (selected) this.selectedSeasonProducts.set(product, selected);
+    else this.selectedSeasonProducts.delete(product);
+    this.regions = regions;
+    this.regionIndex = regions.features.map((feature) => ({ feature, bounds: geometryBounds(feature.geometry) }));
+    return true;
   }
 
   seasonElement(product, element) {

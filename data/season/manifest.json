@@ -1,18 +1,23 @@
 {
   "schema_version": 2,
-  "generator_version": "2.0.0",
-  "dataset_id": "a0fbf20088cf026e",
-  "generated_at": "2026-10-01T13:00:58+00:00",
-  "fetched_at": "2026-10-01T13:00:55+00:00",
+  "generator_version": "3.0.0",
+  "dataset_id": "493fcef4aa2754ea",
+  "generated_at": "2026-10-23T22:22:32+09:00",
+  "fetched_at": "2026-10-23T22:22:31+09:00",
   "status": "available",
   "files": {
+    "archive": {
+      "path": "history/index.json",
+      "bytes": 8703,
+      "sha256": "81914e6ccc73c4ea707540f043374b9c0b1f8f8d70384250dced619efeeaca17"
+    },
     "latest": {
-      "path": "datasets/a0fbf20088cf026e/latest.json",
-      "bytes": 591038,
-      "sha256": "605b6847b2461e1f64f1bae4640ea55d7e978dc03cee75e517a4761db168f517"
+      "path": "datasets/493fcef4aa2754ea/latest.json",
+      "bytes": 694167,
+      "sha256": "91c8fda946a2d2ed0be4f5479670115da63a32619cb1ae5b4ddea11f59602f7c"
     },
     "regions": {
-      "path": "datasets/a0fbf20088cf026e/regions.geojson",
+      "path": "datasets/493fcef4aa2754ea/regions.geojson",
       "bytes": 417255,
       "sha256": "b3bff6c73e85b8c5161d7f9f9a5f0afa9fc6c3ad37c304370fd3b193f46ec35a",
       "feature_count": 385,
@@ -22,8 +27,8 @@
   "products": {
     "P1M": {
       "status": "available",
-      "report_datetime": "2026-10-01T14:30:00+09:00",
-      "target_datetime": "2026-10-03T00:00:00+09:00",
+      "report_datetime": "2026-10-22T14:30:00+09:00",
+      "target_datetime": "2026-10-24T00:00:00+09:00",
       "elements": {
         "temperature": {
           "status": "available",
@@ -55,14 +60,14 @@
         }
       },
       "source_url": "https://www.jma.go.jp/bosai/season/data/P1M.json",
-      "source_sha256": "a92fd9d49a5b07f6a272a0fa38fd7e9481086d7a313178d8ebdd44fd59a8b7a5",
-      "etag": "\"77d1938a7eb2d90323d52201f56b1ef2\"",
-      "last_modified": "Thu, 01 Oct 2026 05:08:53 GMT"
+      "source_sha256": "008ffff150d386f4997a049b9b2fe02546d4fb2c41137e70aa3731b9f061cf6c",
+      "etag": "\"5db19a5dda1026e55b1f42e12fc8c18f\"",
+      "last_modified": "Thu, 22 Oct 2026 05:12:37 GMT"
     },
     "P3M": {
       "status": "available",
-      "report_datetime": "2026-09-18T14:00:00+09:00",
-      "target_datetime": "2026-10-01T00:00:00+09:00",
+      "report_datetime": "2026-10-20T14:00:00+09:00",
+      "target_datetime": "2026-11-01T00:00:00+09:00",
       "elements": {
         "temperature": {
           "status": "available",
@@ -86,17 +91,56 @@
           "available_term_count": 0
         },
         "snowfall": {
-          "status": "unavailable",
+          "status": "available",
           "supported": true,
-          "unavailable_reason": "seasonal_not_issued",
+          "unavailable_reason": null,
           "term_count": 1,
-          "available_term_count": 0
+          "available_term_count": 1
         }
       },
       "source_url": "https://www.jma.go.jp/bosai/season/data/P3M.json",
-      "source_sha256": "4efd12bf319917b1f49ec01037565d3d81880068f5cbd00f2b918671cc40a4e6",
-      "etag": "\"07c3b3cf19b6ee64b16dbf6c81ef3199\"",
-      "last_modified": "Fri, 18 Sep 2026 04:34:24 GMT"
+      "source_sha256": "a73153be6b52bc97f4d0702cb275f41fb80d5b1b81ff42e60a15e17442563065",
+      "etag": "\"b9078b470f8d47b980d114517cd3bd4b\"",
+      "last_modified": "Tue, 20 Oct 2026 04:35:32 GMT"
+    },
+    "COLD": {
+      "status": "available",
+      "report_datetime": "2026-09-18T14:00:00+09:00",
+      "target_datetime": "2026-10-01T00:00:00+09:00",
+      "elements": {
+        "temperature": {
+          "status": "available",
+          "supported": true,
+          "unavailable_reason": null,
+          "term_count": 1,
+          "available_term_count": 1
+        },
+        "precipitation": {
+          "status": "available",
+          "supported": true,
+          "unavailable_reason": null,
+          "term_count": 1,
+          "available_term_count": 1
+        },
+        "sunshine": {
+          "status": "unavailable",
+          "supported": false,
+          "unavailable_reason": "not_supported_by_product",
+          "term_count": 0,
+          "available_term_count": 0
+        },
+        "snowfall": {
+          "status": "available",
+          "supported": true,
+          "unavailable_reason": null,
+          "term_count": 1,
+          "available_term_count": 1
+        }
+      },
+      "source_url": "https://www.jma.go.jp/bosai/season/data/P6M.json",
+      "source_sha256": "b1f99d3c31dfc3e40e72d384c426bb601955dc02ea4acc9d2a69092aec7dd43c",
+      "etag": "\"b7d6f62bdff36ce6b1da871d1298630b\"",
+      "last_modified": "Fri, 18 Sep 2026 04:45:22 GMT"
     }
   },
   "boundaries": {
@@ -142,6 +186,29 @@
     "resolved_class15_count_per_full_coverage_term": 376,
     "snowfall_coverage": "officially_provided_regions_only",
     "supported_terms": {
+      "WARM": {
+        "temperature": [
+          0
+        ],
+        "precipitation": [
+          0,
+          1
+        ],
+        "sunshine": [],
+        "snowfall": []
+      },
+      "COLD": {
+        "temperature": [
+          0
+        ],
+        "precipitation": [
+          0
+        ],
+        "sunshine": [],
+        "snowfall": [
+          0
+        ]
+      },
       "P1M": {
         "temperature": [
           0,
@@ -179,6 +246,7 @@
       }
     },
     "duplicate_geometry_codes_preserved": 9,
-    "dataset_retention": 2
+    "dataset_retention": 2,
+    "archive_retention_months": 12
   }
 }

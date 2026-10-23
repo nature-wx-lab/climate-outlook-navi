@@ -17,6 +17,11 @@ on:
         required: true
         default: true
         type: boolean
+      refresh_observations:
+        description: Also refresh observations (disable for an independent seasonal forecast refresh)
+        required: true
+        default: true
+        type: boolean
 
 permissions: {}
 
@@ -36,6 +41,7 @@ jobs:
       changed: ${{ steps.state.outputs.changed }}
       should_deploy: ${{ steps.state.outputs.should_deploy }}
       source_sha: ${{ steps.state.outputs.source_sha }}
+      recent_refresh_failed: ${{ steps.recent_refresh.outcome == 'failure' }}
     steps:
       - name: Check out main with complete history
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -67,8 +73,14 @@ jobs:
       # non-zero result here therefore means that no validated current dataset
       # can be produced and should remain an actionable workflow failure.
       - name: Refresh validated recent-temperature derivative
-        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh)
+        id: recent_refresh
+        continue-on-error: true
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh && inputs.refresh_observations)
         run: python scripts/update_recent_temperature_anomaly.py
+
+      - name: Report retained observations when refresh fails
+        if: steps.recent_refresh.outcome == 'failure'
+        run: echo '::warning::Observation refresh failed its quality gate. Keeping the last verified observations; seasonal forecasts can still be published independently.'
 
       - name: Verify candidate before commit
         env:
@@ -161,6 +173,17 @@ jobs:
         with:
           path: _site
           retention-days: 1
+
+  observation-status:
+    needs: [prepare, verify-public]
+    if: always() && needs.prepare.outputs.recent_refresh_failed == 'true'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Keep observation quality failures actionable after independent forecast publication
+        run: |
+          echo '::error::Observation refresh failed its quality gate. Last verified observations are retained. Seasonal publication proceeds independently; observation recovery still requires attention.'
+          exit 1
 
   deploy:
     if: needs.build.result == 'success'

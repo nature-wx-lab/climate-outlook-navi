@@ -325,6 +325,9 @@ body.recent-view.detail-collapsed .map-info { max-width: calc(100% - 75px); }
 }
 .climate-legend { top: 52px; width: 118px; padding: 9px 9px 10px; }
 .season-legend { bottom: 22px; width: 242px; }
+.forecast-view .season-legend { top: 78px; bottom: auto; }
+.forecast-view .climate-legend { display: none; }
+#forecastEditionNote { padding: 6px 8px; background: #eef3f5; border-left: 3px solid #6d6aa4; }
 .legend-heading { display: block; line-height: 1.2; }
 .legend-heading strong { display: inline; font-size: 11px; overflow-wrap: anywhere; white-space: normal; }
 .legend-heading span { display: inline; margin-left: 4px; color: #51666e; font-size: 8px; font-weight: 800; }

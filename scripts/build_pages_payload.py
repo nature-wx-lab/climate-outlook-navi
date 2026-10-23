@@ -116,6 +116,13 @@ def manifest_data_paths() -> tuple[str, ...]:
         climate_paths.add(safe_manifest_path("data/climate", climate["static"]["prefectures"]["path"]))
     season_paths = {"data/season/manifest.json"}
     season_paths.update(safe_manifest_path("data/season", entry["path"]) for entry in season["files"].values())
+    if "archive" in season["files"]:
+        archive = json.loads((ROOT / "data/season" / season["files"]["archive"]["path"]).read_text())
+        for edition in archive["editions"]:
+            for asset in (edition, edition["regions"]):
+                relative = safe_manifest_path("data/season", asset["path"])
+                verify_inventory_entry(relative, asset)
+                season_paths.add(relative)
     recent_temperature_paths = {"data/recent-temperature/manifest.json"}
     recent_temperature_paths.update(
         safe_manifest_path("data/recent-temperature", entry["path"])
