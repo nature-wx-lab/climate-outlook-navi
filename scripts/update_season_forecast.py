@@ -666,7 +666,8 @@ def validate_cached_product(name: str, product: dict[str, Any], codes: set[str])
 
 
 def collection_status(root: Path, started: str, issue_calendar: dict[str, Any] | None,
-                      errors: dict[str, str], now: datetime) -> dict[str, Any]:
+                      errors: dict[str, str], now: datetime,
+                      review_checks: dict[str, str] | None = None) -> dict[str, Any]:
     from season_issue_calendar import expected_issues_since
 
     cutoff = max(parse_datetime(started), add_months(now, -12))
@@ -690,11 +691,49 @@ def collection_status(root: Path, started: str, issue_calendar: dict[str, Any] |
             "coverage_start": cutoff.isoformat(timespec="seconds"),
             "checked_through": checked_through.isoformat(timespec="seconds"),
             "expected_issues": results, "missing_issue_count": sum(item["status"] == "missing" for item in results),
-            "fetch_errors": dict(sorted(errors.items()))}
+            "fetch_errors": dict(sorted(errors.items())),
+            **({"review_checks": dict(sorted((product, when) for product, when in review_checks.items()
+                                             if cutoff <= parse_datetime(when) <= now))} if review_checks else {})}
+
+
+def collection_plan(status: dict[str, Any], previous: dict[str, Any] | None,
+                    old_errors: dict[str, str], issue_calendar: dict[str, Any] | None,
+                    now: datetime) -> dict[str, dict[str, Any]]:
+    """Request only an uncollected latest issue or a previously failed source."""
+    if previous is None or not {"collection", "calendar", "reference"} <= previous.get("files", {}).keys():
+        return {source: {} for source in PRODUCT_URLS}
+    latest = {}
+    for issue in status["expected_issues"]:
+        source = issue["product"] if issue["product"] in PRODUCT_URLS else "P6M"
+        if source not in latest or parse_datetime(issue["report_datetime"]) > parse_datetime(latest[source]["report_datetime"]):
+            latest[source] = issue
+    plan = {source: {} for source in PRODUCT_URLS if source in old_errors}
+    for source, issue in latest.items():
+        names = ("WARM", "COLD") if source == "P6M" else (source,)
+        current = [parse_datetime(previous["products"][name]["report_datetime"])
+                   for name in names if name in previous["products"]]
+        # An older missing edition cannot be fetched after a newer one has
+        # replaced it upstream. Keep the gap visible without polling forever.
+        if issue["status"] == "missing" and (not current or max(current) <= parse_datetime(issue["report_datetime"])):
+            plan[source] = {"expected_report_datetime": issue["report_datetime"]}
+    if issue_calendar is not None:
+        from season_issue_calendar import review_issues_since
+        checks = status.get("review_checks", {})
+        for review in review_issues_since(status["coverage_start"], now, issue_calendar):
+            when = parse_datetime(review["report_datetime"])
+            if review["product"] in checks and parse_datetime(checks[review["product"]]) >= when:
+                continue
+            current = previous["products"].get(review["product"])
+            if current and parse_datetime(current["report_datetime"]) >= when:
+                continue
+            if "P6M" in latest and parse_datetime(latest["P6M"]["report_datetime"]) > when:
+                continue
+            plan.setdefault("P6M", {}).update(review_product=review["product"], review_datetime=review["report_datetime"])
+    return plan
 
 
 def update(args: argparse.Namespace) -> dict[str, Any]:
-    from season_issue_calendar import load_issue_calendar, probe_due
+    from season_issue_calendar import load_issue_calendar, validate_issue_calendar
 
     root = Path(args.output).resolve()
     previous = json.loads((root / "manifest.json").read_text()) if (root / "manifest.json").is_file() else None
@@ -703,29 +742,43 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
     errors: dict[str, str] = {}
     now = datetime.now(timezone.utc)
     old_status = verified_json(root, previous["files"]["collection"]) if previous and "collection" in previous["files"] else None
+    old_errors = (old_status or {}).get("fetch_errors", {})
+    errors.update({source: code for source, code in old_errors.items() if source in PRODUCT_URLS})
+    review_checks = deepcopy((old_status or {}).get("review_checks", {}))
     started = old_status["monitoring_started_at"] if old_status else now.isoformat(timespec="seconds")
     issue_calendar = None
     calendar_cache = None
     if previous and "calendar" in previous["files"]:
-        verified_json(root, previous["files"]["calendar"])
+        issue_calendar = verified_json(root, previous["files"]["calendar"])
         calendar_cache = root / CALENDAR_FILE
     try:
-        issue_calendar = load_issue_calendar(cache_path=calendar_cache, now=now)
+        if issue_calendar is not None:
+            try:
+                validate_issue_calendar(issue_calendar, now)
+            except ValueError:
+                issue_calendar = None
+        if getattr(args, "refresh_calendar", False) or issue_calendar is None or "calendar" in old_errors:
+            issue_calendar = load_issue_calendar(cache_path=calendar_cache, now=now)
         if issue_calendar.get("acquisition_error"):
             errors["calendar"] = issue_calendar["acquisition_error"]
         atomic_json(root / CALENDAR_FILE, {key: value for key, value in issue_calendar.items() if not key.startswith("acquisition_")})
     except Exception:
         errors["calendar"] = "calendar_coverage_unavailable"
-    status = collection_status(root, started, issue_calendar, errors, now)
-    retry_pending = bool((old_status or {}).get("fetch_errors") or (old_status or {}).get("missing_issue_count") or status["missing_issue_count"])
+    if previous and "archive" in previous["files"]:
+        verified_json(root, previous["files"]["archive"])
+    status = collection_status(root, started, issue_calendar, errors, now, review_checks)
+    plan = collection_plan(status, previous, old_errors, issue_calendar, now)
+    if args.allow_report_regression:  # Existing explicit manual emergency override.
+        plan = {source: {} for source in PRODUCT_URLS}
     calendar_entry = (previous or {}).get("files", {}).get("calendar")
     calendar_unchanged = calendar_entry is not None and file_entry(root, root / CALENDAR_FILE) == calendar_entry
-    if getattr(args, "probe", False) and old_status and calendar_unchanged and not errors and not retry_pending and not probe_due(now, issue_calendar, monitoring_start=parse_datetime(started)):
-        # A high-frequency trigger may inspect the official release calendar,
-        # but should not refresh lower-frequency data or deploy an unchanged site.
-        return {**previous, "changed": False, "removed_dataset_ids": [], "collection_ok": True, "probe_skipped": True}
+    if old_status and calendar_unchanged and not errors and not old_errors and not plan and not getattr(args, "refresh_calendar", False) and not args.import_git_history:
+        return {**previous, "changed": False, "removed_dataset_ids": [],
+                "collection_ok": status["missing_issue_count"] == 0, "collection_status": status,
+                "probe_skipped": True, "requested_sources": []}
 
-    reference = load_reference(root, previous, args.timeout, errors)
+    reference = (load_reference(root, previous, args.timeout, errors) if plan or "reference" in old_errors or previous is None
+                 else validate_reference(verified_json(root, previous["files"]["reference"])))
     codes = {feature["properties"]["code"] for feature in reference["regions"]["features"]}
     products: dict[str, Any] = {}
     sources: dict[str, Any] = {}
@@ -738,11 +791,25 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
     changed = False
     result = previous
     for source_name, url in PRODUCT_URLS.items():
+        if source_name not in plan:
+            continue
+        errors.pop(source_name, None)
         try:
             payload, headers, raw = fetch_json(url, args.timeout)
             name = ("WARM" if parse_datetime(payload["reportDatetime"]).month in (2, 3, 4) else "COLD") if source_name == "P6M" else source_name
             validated = validate_product(name, payload, reference["recipes"])
-            if name in products and not args.allow_report_regression and parse_datetime(validated["report_datetime"]) < parse_datetime(products[name]["report_datetime"]):
+            if plan[source_name].get("review_product") and name != plan[source_name]["review_product"]:
+                errors[source_name] = "product_not_updated"
+                continue
+            expected_report = plan[source_name].get("expected_report_datetime")
+            if expected_report and parse_datetime(validated["report_datetime"]) < parse_datetime(expected_report):
+                errors[source_name] = "product_not_updated"
+                continue
+            previous_names = ("WARM", "COLD") if source_name == "P6M" else (name,)
+            if not args.allow_report_regression and any(
+                candidate in products and parse_datetime(validated["report_datetime"]) < parse_datetime(products[candidate]["report_datetime"])
+                for candidate in previous_names
+            ):
                 raise ValueError("official report date regressed")
         except Exception:
             errors[source_name] = "product_fetch_or_validation_failed"
@@ -753,21 +820,23 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
             sources.pop(other, None)
         products[name] = validated
         sources[name] = {"source_sha256": sha256_bytes(raw), **headers}
+        if plan[source_name].get("review_product"):
+            review_checks[plan[source_name]["review_product"]] = plan[source_name]["review_datetime"]
         # Checkpoint every good product BEFORE requesting the next one. A
         # different product's network/schema failure cannot discard this issue.
-        atomic_json(root / COLLECTION_FILE, collection_status(root, started, issue_calendar, errors, now))
+        atomic_json(root / COLLECTION_FILE, collection_status(root, started, issue_calendar, errors, now, review_checks))
         result = promote_snapshot(args, products, sources, reference, fetched_at,
-                                  (started, issue_calendar, errors, now))
+                                  (started, issue_calendar, errors, now, review_checks))
         changed = changed or result["changed"]
     if not products or not {"P1M", "P3M"} <= products.keys():
         raise ValueError("no complete primary last-known-good product view is available")
-    status = collection_status(root, started, issue_calendar, errors, now)
+    status = collection_status(root, started, issue_calendar, errors, now, review_checks)
     atomic_json(root / COLLECTION_FILE, status)
     result = promote_snapshot(args, products, sources, reference, fetched_at,
-                              (started, issue_calendar, errors, now))
+                              (started, issue_calendar, errors, now, review_checks))
     changed = changed or result["changed"]
     return {**result, "changed": changed, "collection_ok": not errors and status["missing_issue_count"] == 0,
-            "collection_status": status, "probe_skipped": False}
+            "collection_status": status, "probe_skipped": not plan, "requested_sources": list(plan)}
 
 
 def promote_snapshot(args: argparse.Namespace, products: dict[str, Any],
@@ -801,8 +870,7 @@ def promote_snapshot(args: argparse.Namespace, products: dict[str, Any],
         {name: {"source_url": PRODUCT_URLS.get(name, PRODUCT_URLS["P6M"]), "source_sha256": source_hashes[name]} for name in products},
         import_history=args.import_git_history)
     if collection_context is not None:
-        started, issue_calendar, errors, now = collection_context
-        atomic_json(output_root / COLLECTION_FILE, collection_status(output_root, started, issue_calendar, errors, now))
+        atomic_json(output_root / COLLECTION_FILE, collection_status(output_root, *collection_context))
         controls["collection"] = file_entry(output_root, output_root / COLLECTION_FILE)
     final_dataset_dir = output_root / "datasets" / dataset_id
     if final_dataset_dir.is_dir() and manifest_path.is_file():
@@ -946,7 +1014,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="data/season")
     parser.add_argument("--timeout", type=int, default=30)
-    parser.add_argument("--probe", action="store_true", help="only collect on release days or while an acquisition is missing or failed")
+    parser.add_argument("--probe", action="store_true", help="compatibility alias; every normal invocation collects only pending or failed products")
+    parser.add_argument("--refresh-calendar", action="store_true", help="refresh the official calendar once in the daily observation job")
     parser.add_argument("--import-git-history", action="store_true", help="import available verified forecast editions from this repository's last year")
     parser.add_argument(
         "--allow-report-regression",
@@ -974,6 +1043,7 @@ def main() -> None:
         "collection_ok": manifest.get("collection_ok", True),
         "collection_status": manifest.get("collection_status"),
         "probe_skipped": manifest.get("probe_skipped", False),
+        "requested_sources": manifest.get("requested_sources", []),
     }, ensure_ascii=False, indent=2))
     if not manifest.get("collection_ok", True):
         raise SystemExit(1)

@@ -84,15 +84,15 @@ def fixture_product(product: str, report: str) -> dict:
         target = (reported + timedelta(days=2)).replace(hour=0, minute=0, second=0)
         times = [target + timedelta(days=offset) for offset in (0, 7, 14)]
     elif product == "P3M":
-        target = reported.replace(month=11, day=1, hour=0, minute=0, second=0)
+        target = season.add_months(reported.replace(day=1, hour=0, minute=0, second=0), 1)
         times = [season.add_months(target, offset) for offset in range(3)]
     else:
-        target = reported.replace(month=10, day=1, hour=0, minute=0, second=0)
+        target = reported.replace(month=3 if product == "WARM" else 10, day=1, hour=0, minute=0, second=0)
         times = []
     result = {
         "reportDatetime": report,
         "targetDatetime": target.isoformat(),
-        "targetDuration": {"COLD": "P5M"}.get(product, product),
+        "targetDuration": {"COLD": "P5M", "WARM": "P6M"}.get(product, product),
         "durationType": "all",
         "timeDefines": [value.isoformat() for value in times],
     }
@@ -134,17 +134,17 @@ class SeasonCollectionTests(unittest.TestCase):
         except OSError:
             pass
 
-    def seed(self):
-        with clock(SEED_TIME):
+    def seed(self, now=SEED_TIME):
+        with clock(now):
             season.atomic_json(self.root / season.REFERENCE_FILE, self.reference)
             season.atomic_json(self.root / season.CALENDAR_FILE, self.calendar)
-            status = season.collection_status(self.root, SEED_TIME.isoformat(), self.calendar, {}, SEED_TIME)
+            status = season.collection_status(self.root, now.isoformat(), self.calendar, {}, now)
             season.atomic_json(self.root / season.COLLECTION_FILE, status)
             products = {name: season.validate_product(name, payload, self.reference["recipes"]) for name, payload in self.payloads.items()}
             sources = {name: {"source_sha256": season.sha256_bytes(encoded(payload)), "etag": None, "last_modified": None} for name, payload in self.payloads.items()}
             season.promote_snapshot(
-                self.args, products, sources, self.reference, SEED_TIME.isoformat(),
-                (SEED_TIME.isoformat(), self.calendar, {}, SEED_TIME),
+                self.args, products, sources, self.reference, now.isoformat(),
+                (now.isoformat(), self.calendar, {}, now),
             )
 
     def latest(self) -> dict:
@@ -171,17 +171,17 @@ class SeasonCollectionTests(unittest.TestCase):
                 payload = self.area
             else:
                 source = next(name for name, value in season.PRODUCT_URLS.items() if value == url)
-                payload = self.payloads["COLD" if source == "P6M" else source]
+                payload = (self.payloads.get("WARM") or self.payloads.get("COLD")) if source == "P6M" else self.payloads[source]
             raw = encoded(payload)
             return deepcopy(payload), {"etag": None, "last_modified": None, "content_length": str(len(raw))}, raw
 
         return fetch
 
-    def update(self, *, now=ISSUE_TIME, failures=None, on_fetch=None):
-        fresh_calendar = {**deepcopy(self.calendar), "acquisition_status": "fresh", "acquisition_error": None}
+    def update(self, *, now=ISSUE_TIME, failures=None, on_fetch=None, calendar_error=None):
+        fresh_calendar = {**deepcopy(self.calendar), "acquisition_status": "fresh", "acquisition_error": calendar_error}
         with ExitStack() as stack:
             stack.enter_context(clock(now))
-            stack.enter_context(patch.object(issue_calendar, "load_issue_calendar", return_value=fresh_calendar))
+            self.calendar_fetch = stack.enter_context(patch.object(issue_calendar, "load_issue_calendar", return_value=fresh_calendar))
             stack.enter_context(patch.object(season, "build_recipes", return_value=deepcopy(self.reference["recipes"])))
             fetch = stack.enter_context(patch.object(season, "fetch_json", side_effect=self.fetcher(failures=failures, on_fetch=on_fetch)))
             result = season.update(self.args)
@@ -198,18 +198,30 @@ class SeasonCollectionTests(unittest.TestCase):
         manifest["files"]["collection"] = season.file_entry(self.root, path)
         season.atomic_json(manifest_path, manifest)
 
+    def mark_failed(self, source):
+        status = json.loads((self.root / season.COLLECTION_FILE).read_text())
+        status["fetch_errors"][source] = "product_fetch_or_validation_failed"
+        self.replace_collection_status_with_valid_manifest_hash(status)
+
+    def requested_products(self, fetch):
+        return [source for item in fetch.call_args_list
+                for source, url in season.PRODUCT_URLS.items() if item.args[0] == url]
+
     def test_normal_collection_passes_the_public_season_contract(self):
         self.seed()
         self.new_weekly()
-        result, _ = self.update()
+        result, fetch = self.update()
         verified = contract.verify_season(self.site_root)
         self.assertTrue(result["collection_ok"])
         self.assertTrue(verified["checksums_ok"])
         self.assertTrue(verified["collection"]["complete"])
         self.assertEqual(verified["collection"]["missing_issue_count"], 0)
+        self.assertEqual(self.requested_products(fetch), ["P1M"])
+        self.calendar_fetch.assert_not_called()
 
     def test_partial_collection_passes_data_contract_with_incomplete_status(self):
         self.seed()
+        self.mark_failed("P3M")
         self.new_weekly()
         result, _ = self.update(failures={season.PRODUCT_URLS["P3M"]: TimeoutError("monthly unavailable")})
         verified = contract.verify_season(self.site_root)
@@ -244,6 +256,7 @@ class SeasonCollectionTests(unittest.TestCase):
 
     def test_good_weekly_issue_is_checkpointed_before_monthly_fetch_fails(self):
         self.seed()
+        self.mark_failed("P3M")
         self.new_weekly()
         witnessed = []
 
@@ -253,6 +266,8 @@ class SeasonCollectionTests(unittest.TestCase):
                 self.assertTrue(self.collected("P1M", "2026-10-29T14:30:00+09:00"))
                 manifest = json.loads((self.root / "manifest.json").read_text())
                 season.verified_json(self.root, manifest["files"]["archive"])
+                pending = season.verified_json(self.root, manifest["files"]["collection"])
+                self.assertIn("P3M", pending["fetch_errors"])
                 witnessed.append(True)
 
         result, _ = self.update(
@@ -266,6 +281,7 @@ class SeasonCollectionTests(unittest.TestCase):
 
     def test_invalid_monthly_probabilities_are_not_archived_or_blocking_weekly(self):
         self.seed()
+        self.mark_failed("P3M")
         self.new_weekly()
         self.payloads["P3M"]["temperature"]["010100"][0] = [30, 30, 30]
         bad_digest = season.sha256_bytes(encoded(self.payloads["P3M"]))
@@ -292,12 +308,140 @@ class SeasonCollectionTests(unittest.TestCase):
 
     def test_probe_on_an_off_day_never_fetches_products_or_references(self):
         self.seed()
-        self.args.probe = True
         result, fetch = self.update(now=datetime(2026, 10, 27, 16, 5, tzinfo=JST))
         self.assertTrue(result["collection_ok"])
         self.assertTrue(result["probe_skipped"])
         self.assertFalse(result["changed"])
         fetch.assert_not_called()
+        self.calendar_fetch.assert_not_called()
+
+    def test_successful_issue_is_not_fetched_again_in_later_slots_or_daily_job(self):
+        self.seed()
+        self.new_weekly()
+        first, fetch = self.update()
+        self.assertEqual(self.requested_products(fetch), ["P1M"])
+        for hour, refresh_calendar in ((16, False), (18, True)):
+            self.args.refresh_calendar = refresh_calendar
+            later, fetch = self.update(now=ISSUE_TIME.replace(hour=hour, minute=5))
+            self.assertTrue(later["collection_ok"])
+            self.assertFalse(later["changed"])
+            fetch.assert_not_called()
+            self.assertEqual(self.calendar_fetch.call_count, int(refresh_calendar))
+
+    def test_retry_only_the_failed_product_then_stop(self):
+        self.seed()
+        self.mark_failed("P3M")
+        self.new_weekly()
+        first, fetch = self.update(failures={season.PRODUCT_URLS["P3M"]: TimeoutError("offline")})
+        self.assertFalse(first["collection_ok"])
+        self.assertEqual(self.requested_products(fetch), ["P1M", "P3M"])
+        second, fetch = self.update(now=ISSUE_TIME + timedelta(hours=1))
+        self.assertTrue(second["collection_ok"])
+        self.assertEqual(self.requested_products(fetch), ["P3M"])
+        third, fetch = self.update(now=ISSUE_TIME + timedelta(hours=3))
+        self.assertTrue(third["collection_ok"])
+        fetch.assert_not_called()
+
+    def test_old_response_is_pending_and_only_that_product_is_retried(self):
+        self.seed()
+        first, fetch = self.update()
+        self.assertEqual(self.requested_products(fetch), ["P1M"])
+        self.assertEqual(first["collection_status"]["fetch_errors"]["P1M"], "product_not_updated")
+        self.assertFalse(first["collection_ok"])
+        self.new_weekly()
+        second, fetch = self.update(now=ISSUE_TIME + timedelta(hours=1))
+        self.assertTrue(second["collection_ok"])
+        self.assertEqual(self.requested_products(fetch), ["P1M"])
+        self.assertTrue(contract.verify_season(self.site_root)["collection"]["complete"])
+
+    def test_reference_failure_retries_reference_without_refetching_saved_products(self):
+        self.seed()
+        self.new_weekly()
+        first, _ = self.update(failures={season.REGIONS_URL: TimeoutError("offline")})
+        self.assertFalse(first["collection_ok"])
+        second, fetch = self.update(now=ISSUE_TIME + timedelta(hours=1))
+        self.assertTrue(second["collection_ok"])
+        self.assertEqual(self.requested_products(fetch), [])
+        self.assertEqual(fetch.call_count, 2)
+
+    def test_conditional_october_review_checks_p6m_once_even_without_revision(self):
+        self.payloads["P1M"] = fixture_product("P1M", "2026-10-15T14:30:00+09:00")
+        self.payloads["P3M"] = fixture_product("P3M", "2026-09-18T14:00:00+09:00")
+        self.seed(now=datetime(2026, 10, 19, 15, tzinfo=JST))
+        self.payloads["P3M"] = fixture_product("P3M", "2026-10-20T14:00:00+09:00")
+        now = datetime(2026, 10, 20, 14, 45, tzinfo=JST)
+        first, fetch = self.update(now=now)
+        self.assertTrue(first["collection_ok"])
+        self.assertEqual(self.requested_products(fetch), ["P3M", "P6M"])
+        self.assertEqual(first["collection_status"]["review_checks"], {"COLD": "2026-10-20T14:00:00+09:00"})
+        self.assertTrue(contract.verify_season(self.site_root)["collection"]["complete"])
+        second, fetch = self.update(now=now + timedelta(hours=1))
+        self.assertTrue(second["collection_ok"])
+        fetch.assert_not_called()
+
+    def test_an_older_unrecoverable_gap_stays_visible_without_repeated_fetching(self):
+        status = {"coverage_start": "2026-10-01T00:00:00+09:00", "expected_issues": [
+            {"product": "P1M", "report_datetime": "2026-10-15T14:30:00+09:00", "status": "missing"},
+            {"product": "P1M", "report_datetime": "2026-10-22T14:30:00+09:00", "status": "captured"},
+        ]}
+        previous = {"files": {key: {} for key in ("collection", "calendar", "reference")},
+                    "products": {"P1M": {"report_datetime": "2026-10-22T14:30:00+09:00"}}}
+        self.assertEqual(season.collection_plan(status, previous, {}, None, SEED_TIME), {})
+
+    def test_normal_monthly_release_does_not_request_p1m_or_p6m(self):
+        from test_season_issue_calendar import official_fixture
+        self.calendar = issue_calendar.parse_issue_calendar(official_fixture().encode())
+        self.payloads["P1M"] = fixture_product("P1M", "2026-11-19T14:30:00+09:00")
+        self.seed(now=datetime(2026, 11, 23, 15, tzinfo=JST))
+        self.payloads["P3M"] = fixture_product("P3M", "2026-11-24T14:00:00+09:00")
+        result, fetch = self.update(now=datetime(2026, 11, 24, 14, 45, tzinfo=JST))
+        self.assertTrue(result["collection_ok"])
+        self.assertEqual(self.requested_products(fetch), ["P3M"])
+
+    def test_warm_release_preserves_cold_archive_and_is_not_fetched_the_next_day(self):
+        from test_season_issue_calendar import official_fixture
+        self.calendar = issue_calendar.parse_issue_calendar(official_fixture().encode())
+        self.payloads["P1M"] = fixture_product("P1M", "2027-02-18T14:30:00+09:00")
+        self.payloads["P3M"] = fixture_product("P3M", "2027-01-19T14:00:00+09:00")
+        self.seed(now=datetime(2027, 2, 21, 15, tzinfo=JST))
+        self.payloads["P3M"] = fixture_product("P3M", "2027-02-22T14:00:00+09:00")
+        self.payloads["WARM"] = fixture_product("WARM", "2027-02-22T14:00:00+09:00")
+        result, fetch = self.update(now=datetime(2027, 2, 22, 14, 45, tzinfo=JST))
+        self.assertTrue(result["collection_ok"])
+        self.assertEqual(self.requested_products(fetch), ["P3M", "P6M"])
+        self.assertIn("WARM", self.latest()["products"])
+        self.assertNotIn("COLD", self.latest()["products"])
+        self.assertTrue(self.collected("COLD", "2026-09-18T14:00:00+09:00"))
+        self.assertTrue(contract.verify_season(self.site_root)["collection"]["complete"])
+        result, fetch = self.update(now=datetime(2027, 2, 23, 15, 5, tzinfo=JST))
+        self.assertTrue(result["collection_ok"])
+        fetch.assert_not_called()
+
+    def test_calendar_failure_is_retried_and_cleared_without_fetching_products(self):
+        self.seed()
+        self.args.refresh_calendar = True
+        now = datetime(2026, 10, 27, 15, 5, tzinfo=JST)
+        first, fetch = self.update(now=now, calendar_error="fetch_failed")
+        self.assertFalse(first["collection_ok"])
+        fetch.assert_not_called()
+        self.args.refresh_calendar = False
+        second, fetch = self.update(now=now + timedelta(hours=1))
+        self.assertTrue(second["collection_ok"])
+        self.assertEqual(self.calendar_fetch.call_count, 1)
+        self.assertEqual(second["collection_status"]["fetch_errors"], {})
+        fetch.assert_not_called()
+        third, fetch = self.update(now=now + timedelta(hours=3))
+        self.assertTrue(third["collection_ok"])
+        self.calendar_fetch.assert_not_called()
+        fetch.assert_not_called()
+
+    def test_forged_conditional_review_date_is_rejected(self):
+        self.seed()
+        status = json.loads((self.root / season.COLLECTION_FILE).read_text())
+        status["review_checks"] = {"COLD": status["checked_through"]}
+        self.replace_collection_status_with_valid_manifest_hash(status)
+        with self.assertRaisesRegex(AssertionError, "review check date invalid"):
+            contract.verify_season(self.site_root)
 
     def test_verified_reference_fallback_still_checkpoints_good_new_products(self):
         self.seed()

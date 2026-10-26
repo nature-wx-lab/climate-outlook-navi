@@ -966,7 +966,7 @@ def verify_season_v2(
 
 
 def verify_season_collection(root: Path, manifest: dict, archive: dict) -> dict[str, int | bool]:
-    from season_issue_calendar import expected_issues_since, validate_issue_calendar
+    from season_issue_calendar import expected_issues_since, review_issues_since, validate_issue_calendar
     from update_season_forecast import validate_reference, parse_datetime
 
     controls = {"collection": "collection-status.json", "calendar": "issue-calendar.json", "reference": "collection-reference.json"}
@@ -987,7 +987,14 @@ def verify_season_collection(root: Path, manifest: dict, archive: dict) -> dict[
     require(started <= coverage_start <= checked, "season collection check range mismatch")
     errors = status.get("fetch_errors")
     require(isinstance(errors, dict) and set(errors) <= {"P1M", "P3M", "P6M", "reference", "calendar"}, "season collection error keys invalid")
-    require(all(value in {"product_fetch_or_validation_failed", "official_reference_unavailable", "calendar_coverage_unavailable", "fetch_failed", "source_invalid"} for value in errors.values()), "season collection error code invalid")
+    require(all(value in {"product_fetch_or_validation_failed", "product_not_updated", "official_reference_unavailable", "calendar_coverage_unavailable", "fetch_failed", "source_invalid"} for value in errors.values()), "season collection error code invalid")
+    reviews = status.get("review_checks", {})
+    require(isinstance(reviews, dict) and set(reviews) <= {"WARM", "COLD"}, "season review check products invalid")
+    require(all(coverage_start <= parse_datetime(when) <= checked for when in reviews.values()), "season review check range invalid")
+    if "calendar" not in errors:
+        allowed_reviews = {(item["product"], parse_datetime(item["report_datetime"]))
+                           for item in review_issues_since(coverage_start, checked, issue_calendar)}
+        require(all((product, parse_datetime(when)) in allowed_reviews for product, when in reviews.items()), "season review check date invalid")
     expected = status.get("expected_issues")
     require(isinstance(expected, list), "season expected issues missing")
     actual_keys = [(entry["product"], entry["report_datetime"]) for entry in expected]

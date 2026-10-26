@@ -103,6 +103,12 @@ class IssueCalendarTests(unittest.TestCase):
         with self.assertRaises(issue_calendar.CalendarCoverageError):
             issue_calendar.load_issue_calendar(None, fetcher=lambda _: official_fixture().encode(), now=datetime.fromisoformat("2027-04-01T15:00:00+09:00"))
 
+    def test_conditional_reviews_are_limited_to_march_april_and_october(self):
+        cal = issue_calendar.parse_issue_calendar(official_fixture().encode())
+        reviews = issue_calendar.review_issues_since("2026-03-01T00:00:00+09:00", "2027-03-31T18:00:00+09:00", cal)
+        self.assertEqual({datetime.fromisoformat(item["report_datetime"]).month for item in reviews}, {3, 4, 10})
+        self.assertTrue(all(item["product"] == ("COLD" if datetime.fromisoformat(item["report_datetime"]).month == 10 else "WARM") for item in reviews))
+
     def test_default_html_fetch_has_one_bounded_retry(self):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = official_fixture().encode()

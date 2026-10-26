@@ -257,3 +257,16 @@ def probe_due(now: datetime | str, issue_calendar: dict[str, Any], *, monitoring
     if start > now:
         return False
     return bool(expected_issues_since(start, now, issue_calendar, grace_minutes=grace_minutes))
+
+
+def review_issues_since(start: datetime | str, now: datetime | str,
+                        issue_calendar: dict[str, Any]) -> list[dict[str, str]]:
+    """Conditional seasonal revisions: March/April WARM and October COLD.
+
+    These are checks on the official P3M date, not mandatory new editions.
+    A valid unchanged P6M response completes that day's conditional check.
+    """
+    return [{"product": "COLD" if _aware(issue["report_datetime"]).month == 10 else "WARM",
+             "report_datetime": issue["report_datetime"]}
+            for issue in expected_issues_since(start, now, issue_calendar)
+            if issue["product"] == "P3M" and _aware(issue["report_datetime"]).month in (3, 4, 10)]

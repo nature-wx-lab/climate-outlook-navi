@@ -79,7 +79,7 @@ git() {
 
 
 class SeasonCollectionWorkflowTests(unittest.TestCase):
-    def test_daily_fallback_and_three_publication_followups(self):
+    def test_daily_observations_and_three_conditional_retry_slots(self):
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertEqual(
             re.findall(r'    - cron: "([^"]+)"', text),
@@ -98,7 +98,7 @@ class SeasonCollectionWorkflowTests(unittest.TestCase):
         self.assertFalse(condition(name, "workflow_dispatch", observations=False))
         self.assertFalse(condition(name, "workflow_dispatch", refresh=False))
 
-    def test_seasonal_probe_uses_the_calendar_aware_mode(self):
+    def test_every_slot_uses_pending_products_only_and_calendar_refresh_is_daily(self):
         name = "Refresh validated seasonal forecast derivative"
         self.assertTrue(condition(name, "schedule", "45 5 * * *"))
         self.assertTrue(condition(name, "schedule", "5 6 * * *"))
@@ -106,11 +106,11 @@ class SeasonCollectionWorkflowTests(unittest.TestCase):
         self.assertFalse(condition(name, "workflow_dispatch", refresh=False))
         script = run_script(name)
         self.assertEqual(
-            shell(script, SEASON_PROBE="true").strip(),
-            "-B scripts/update_season_forecast.py --probe",
+            shell(script, REFRESH_SEASON_CALENDAR="true").strip(),
+            "-B scripts/update_season_forecast.py --refresh-calendar",
         )
         self.assertEqual(
-            shell(script, SEASON_PROBE="false").strip(),
+            shell(script, REFRESH_SEASON_CALENDAR="false").strip(),
             "-B scripts/update_season_forecast.py",
         )
 
