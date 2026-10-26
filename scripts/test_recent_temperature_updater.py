@@ -163,7 +163,7 @@ class ObservationRefreshTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate OBS DL date row"):
             updater.parse_obsdl(duplicate, ["a0001"], expected)
 
-    def test_five_day_period_uses_full_period_normal_with_one_gap(self) -> None:
+    def test_five_day_period_uses_all_daily_normals_with_one_observation_gap(self) -> None:
         normal = [0] * len(updater.NORMAL_DAYS)
         for day, value in zip(
             ("08-25", "08-26", "08-27", "08-28", "08-29"),
@@ -186,7 +186,7 @@ class ObservationRefreshTests(unittest.TestCase):
         ]
         self.assertEqual(
             updater.period_anomaly_tenths(station, dates, 0, 4),
-            updater.Decimal("110"),
+            updater.Decimal("120"),
         )
 
     def test_memambetsu_missing_day_matches_official_five_day_anomaly(self) -> None:
@@ -216,6 +216,56 @@ class ObservationRefreshTests(unittest.TestCase):
             updater.parse_obsdl(raw, ["a1460"], ["2026-09-25", "2026-09-26"]),
             {"a1460": [None, 123]},
         )
+
+    def test_hanamaki_missing_archive_normal_does_not_drop_valid_comparison(self) -> None:
+        # Official OBS DL observations and daily normals, 2026-10-19..23.
+        # tem00.csv published +1.8 C; the five-day archive has no 10-19 value.
+        dates = updater.iso_dates(date(2026, 10, 19), date(2026, 10, 23))
+        normal = [None] * len(updater.NORMAL_DAYS)
+        for day, value in zip(dates, (121, 119, 117, 115, 114)):
+            normal[updater.NORMAL_DAY_INDEX[day[5:]]] = value
+        station = {
+            "station_id": "33576",
+            "observed_tenths": [151, 160, 163, 109, 93],
+            "normal_tenths": normal,
+            "normal_5day_tenths": [None] * len(updater.NORMAL_DAYS),
+        }
+        payload = {"dates": dates, "stations": [station]}
+        with patch.object(updater, "MINIMUM_ACTIVE_STATIONS", 1):
+            result = updater.verify_latest_five_day(
+                payload, date(2026, 10, 23), {"33576": updater.Decimal("1.8")},
+            )
+        self.assertEqual(result["compared_station_count"], 1)
+        self.assertEqual(result["maximum_absolute_difference_c"], 0)
+        self.assertEqual(result["tolerance_c"], 0.1)
+        # Existing non-null archive values must not restore a different
+        # reference method on the next day.
+        station["normal_5day_tenths"] = [109] * len(updater.NORMAL_DAYS)
+        self.assertEqual(updater.period_anomaly_tenths(station, dates, 0, 4), updater.Decimal("18.2"))
+
+        with patch.object(updater, "MINIMUM_ACTIVE_STATIONS", 1):
+            with self.assertRaisesRegex(ValueError, "anomaly mismatches"):
+                updater.verify_latest_five_day(
+                    payload, date(2026, 10, 23), {"33576": updater.Decimal("2.0")},
+                )
+            with self.assertRaisesRegex(ValueError, "uncompared station IDs:.*99999"):
+                updater.verify_latest_five_day(
+                    payload, date(2026, 10, 23),
+                    {"33576": updater.Decimal("1.8"), "99999": updater.Decimal("0")},
+                )
+
+        normal[updater.NORMAL_DAY_INDEX["10-23"]] = None
+        self.assertIsNone(updater.period_anomaly_tenths(station, dates, 0, 4))
+
+    def test_failed_crosscheck_never_writes_candidate_files(self) -> None:
+        with patch.object(updater, "verify_latest_five_day", side_effect=ValueError("incomplete")):
+            with patch.object(updater, "atomic_json") as write:
+                with self.assertRaisesRegex(ValueError, "incomplete"):
+                    updater.write_dataset(
+                        {"dates": ["2026-10-19", "2026-10-23"], "stations": [], "validation": {}},
+                        125, date(2026, 10, 23), {},
+                    )
+        write.assert_not_called()
 
 
 if __name__ == "__main__":

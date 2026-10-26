@@ -537,11 +537,17 @@ export class ClimateDataStore {
       let normalMean;
       let normalMethod = "daily";
       if (expectedDays === 5) {
-        const startNormalIndex = normalIndex.get(start.slice(5));
-        const fiveDayNormal = station.normal_5day_tenths[startNormalIndex];
-        if (!Number.isFinite(fiveDayNormal)) return [];
+        // Use every calendar day in the requested period, including a day
+        // whose observation is missing. The five-day ZIP can itself have
+        // gaps despite complete official daily normals (Hanamaki, October).
+        const fullPeriodNormals = Array.from({ length: 5 }, (_, offset) => {
+          const day = new Date(startDate.getTime() + offset * 86400000).toISOString().slice(5, 10);
+          return station.normal_tenths[normalIndex.get(day)];
+        });
+        if (!fullPeriodNormals.every(Number.isFinite)) return [];
+        const fiveDayNormal = Math.round(fullPeriodNormals.reduce((sum, value) => sum + value, 0) / 5);
         normalMean = fiveDayNormal / 10;
-        normalMethod = "official_5day";
+        normalMethod = "official_daily_full_period";
       } else {
         normalMean = dailyNormals.reduce((sum, value) => sum + value, 0) / dailyNormals.length / 10;
       }

@@ -47,7 +47,7 @@ test("an explicit historical period remains unchanged", () => {
   assert.equal(result.points[0].anomaly, 5);
 });
 
-test("a five-day period with one gap uses the full official five-day normal", () => {
+test("a five-day period with one gap averages the entire period's official daily normals", () => {
   const store = fixture();
   const station = store.recentTemperature.stations[0];
   const start = store.recentTemperature.dates.indexOf("2026-09-21");
@@ -55,10 +55,31 @@ test("a five-day period with one gap uses the full official five-day normal", ()
   station.normal_tenths.splice(start, 5, 151, 149, 146, 144, 142);
   station.normal_5day_tenths[start] = 146;
   const result = store.recentTemperaturePeriod("2026-09-21", "2026-09-25", "2026-09-27");
-  assert.equal(result.points[0].normalMethod, "official_5day");
+  assert.equal(result.points[0].normalMethod, "official_daily_full_period");
   assert.equal(result.points[0].validDays, 4);
   assert.equal(result.points[0].normalMean, 14.6);
   assert.ok(Math.abs(result.points[0].anomaly - 1.75) < 1e-10);
+});
+
+test("Hanamaki remains comparable when the five-day archive normal is missing or inconsistent", () => {
+  const store = fixture();
+  const dataset = store.recentTemperature;
+  dataset.dates = ["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"];
+  dataset.normal_days = dataset.dates.map((day) => day.slice(5));
+  const station = dataset.stations[0];
+  station.station_id = "33576";
+  station.name = "花巻";
+  station.observed_tenths = [151, 160, 163, 109, 93];
+  station.normal_tenths = [121, 119, 117, 115, 114];
+  station.normal_5day_tenths = [null, null, null, null, null];
+  const period = () => store.recentTemperaturePeriod("2026-10-19", "2026-10-23", "2026-10-24");
+  assert.equal(period().points.length, 1);
+  assert.equal(period().points[0].normalMean, 11.7);
+  assert.ok(Math.abs(period().points[0].anomaly - 1.82) < 1e-10);
+  station.normal_5day_tenths[0] = 109;
+  assert.equal(period().points[0].normalMean, 11.7);
+  station.normal_tenths[4] = null;
+  assert.equal(period().points.length, 0);
 });
 
 test("coverage below 80 percent produces no point", () => {

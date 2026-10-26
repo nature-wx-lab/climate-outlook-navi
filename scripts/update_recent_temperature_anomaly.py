@@ -75,6 +75,7 @@ MINIMUM_ACTIVE_STATIONS = 850
 MINIMUM_POPULATION_RATIO = 0.95
 OBSERVATION_BATCH_SIZE = 50
 OBSERVATION_REFRESH_STRATEGY = "full_retention_window"
+FIVE_DAY_NORMAL_METHOD = "official_daily_full_period"
 
 
 @dataclass(frozen=True)
@@ -880,15 +881,21 @@ def period_anomaly_tenths(
     if len(observed) / expected < MINIMUM_VALID_RATIO:
         return None
     if expected == 5:
-        # JMA compares a valid (possibly four-day) observed mean with the
-        # normal for the entire requested five-day period, not only the
-        # dates whose observations survived the quality filter.
-        start_date = date.fromisoformat(dates[start_index])
-        five_day_normal = station["normal_5day_tenths"][
-            NORMAL_DAY_INDEX[start_date.strftime("%m-%d")]
+        # The nationwide table compares with the normal for the entire
+        # requested period. Its reference is the mean of daily normals:
+        # https://www.data.jma.go.jp/stats/mdrr/tenkou/legend.html
+        # The separately distributed daily-five-day archive can have gaps
+        # (e.g. Hanamaki in October) even when daily normals are complete.
+        # Never infer a normal from the anomaly being independently checked.
+        full_period_normals = [
+            normal_for_date(station, date.fromisoformat(dates[index]))
+            for index in range(start_index, end_index + 1)
         ]
-        if five_day_normal is None:
+        if any(value is None for value in full_period_normals):
             return None
+        five_day_normal = (
+            Decimal(sum(full_period_normals)) / expected
+        ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         return (Decimal(sum(observed)) / len(observed)) - Decimal(five_day_normal)
     return (
         (Decimal(sum(observed)) / len(observed))
@@ -911,6 +918,7 @@ def verify_latest_five_day(
     exact_matches = 0
     maximum_difference = Decimal("0")
     compared = 0
+    compared_ids: set[str] = set()
     for station in dataset["stations"]:
         expected = official.get(station["station_id"])
         if expected is None:
@@ -928,6 +936,7 @@ def verify_latest_five_day(
             rounding=ROUND_HALF_UP,
         )
         compared += 1
+        compared_ids.add(station["station_id"])
         difference = abs(actual - expected)
         maximum_difference = max(maximum_difference, difference)
         if difference == 0:
@@ -938,7 +947,8 @@ def verify_latest_five_day(
         raise ValueError(f"too few latest five-day comparisons: {compared}")
     if compared != len(official):
         raise ValueError(
-            f"incomplete latest five-day comparisons: {compared}/{len(official)}"
+            f"incomplete latest five-day comparisons: {compared}/{len(official)}; "
+            f"uncompared station IDs: {sorted(set(official) - compared_ids)[:20]}"
         )
     if mismatches:
         raise ValueError(
@@ -954,6 +964,7 @@ def verify_latest_five_day(
         "tolerance_c": 0.1,
         "maximum_absolute_difference_c": float(maximum_difference),
         "source_url": LATEST_PERIOD_TABLE_URL,
+        "normal_method": FIVE_DAY_NORMAL_METHOD,
     }
 
 
@@ -1011,7 +1022,7 @@ def write_dataset(
 ) -> None:
     dataset["validation"].update({
         "observation_refresh_strategy": OBSERVATION_REFRESH_STRATEGY,
-        "five_day_normal_method": "official_full_period",
+        "five_day_normal_method": FIVE_DAY_NORMAL_METHOD,
         "station_count": len(dataset["stations"]),
         "date_count": len(dataset["dates"]),
         "observation_start": dataset["dates"][0],
@@ -1195,7 +1206,7 @@ def main() -> None:
         dataset["validation"].get("observation_refresh_strategy")
         != OBSERVATION_REFRESH_STRATEGY
         or dataset["validation"].get("five_day_normal_method")
-        != "official_full_period"
+        != FIVE_DAY_NORMAL_METHOD
     )
     if changed or metadata_changed:
         write_dataset(

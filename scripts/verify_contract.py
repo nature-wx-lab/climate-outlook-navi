@@ -1176,7 +1176,7 @@ def verify_hygiene(site_root: Path) -> dict[str, int | bool]:
     require('id="recentStart"' in index and 'id="recentEnd"' in index, "recent period date controls are missing")
     require('id="recentCenterSlider"' in index, "five-day center-date slider is missing")
     require("recentTemperaturePeriod(start, end, today = todayInJapan())" in (site_root / "data.js").read_text(encoding="utf-8"), "recent period calculation must support Japan's current date")
-    require("normal_5day_tenths" in (site_root / "data.js").read_text(encoding="utf-8"), "official five-day normal routing is missing")
+    require("official_daily_full_period" in (site_root / "data.js").read_text(encoding="utf-8"), "full-period daily-normal routing is missing")
     require("setRecentTemperature(points, visible = true)" in map_script, "recent station map layer is missing")
     require(
         "CanvasSquareMarker" in map_script

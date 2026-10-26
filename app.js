@@ -1,4 +1,4 @@
-import { ClimateDataStore, meshBounds, meshCodeFromLatLon, todayInJapan } from "./data.js?v=20261023-season-history1";
+import { ClimateDataStore, meshBounds, meshCodeFromLatLon, todayInJapan } from "./data.js?v=20261026-recent-normal1";
 import { ClimateMap, TEMPERATURE_ANOMALY_LEGEND } from "./map.js?v=20261023-season-history1";
 
 const ELEMENT_ORDER = ["201", "202", "203", "101", "401", "501", "503", "610"];
@@ -948,8 +948,8 @@ function renderRecentSelection() {
   elements.recentObservedMean.textContent = `${point.observedMean.toFixed(1)}℃`;
   elements.recentNormalMean.textContent = `${point.normalMean.toFixed(1)}℃`;
   elements.recentValidDays.textContent = `${point.validDays}/${point.expectedDays}日`;
-  elements.recentStationNote.textContent = point.normalMethod === "official_5day"
-    ? "5日平年値は気象庁の公式5日間平年値。地点間は補間していません。"
+  elements.recentStationNote.textContent = point.normalMethod === "official_daily_full_period"
+    ? "平年側は気象庁の日別平年値を対象5日間で平均した独自集計。地点間は補間していません。"
     : "日別平年値を指定期間で平均した独自集計値。地点間は補間していません。";
 }
 
@@ -1748,7 +1748,7 @@ function bindControls() {
               : `全国 ${state.recentResult.points.length}/${store.recentTemperatureManifest.station_count}地点`,
             "平年：気象庁2020年平年値（1991–2020）",
             state.recentResult.expectedDays === 5
-              ? "5日：気象庁の公式5日間平年値を使用"
+              ? "5日：気象庁の日別平年値を対象5日間で平均（独自集計）"
               : "任意期間：公式日別平年値から独自集計",
             "表示：気象台等＋アメダス（地点間の面的補間なし）",
           ],
