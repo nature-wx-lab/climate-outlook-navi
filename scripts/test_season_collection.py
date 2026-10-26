@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import ExitStack
@@ -337,6 +341,33 @@ class SeasonCollectionTests(unittest.TestCase):
                     season.fetch_json("https://example.invalid/fixture", 1)
         self.assertEqual(once.call_count, 3)
         self.assertEqual(sleep.call_args_list, [call(1), call(2)])
+
+    def test_plain_contract_cli_imports_do_not_create_forbidden_bytecode(self):
+        scripts = self.root / "scripts"
+        scripts.mkdir()
+        source = Path(__file__).resolve().parent
+        for name in ("verify_contract.py", "update_season_forecast.py", "season_issue_calendar.py"):
+            shutil.copyfile(source / name, scripts / name)
+        env = dict(os.environ)
+        env.pop("PYTHONDONTWRITEBYTECODE", None)
+        env.pop("PYTHONPYCACHEPREFIX", None)
+        # Use the plain Python path that failed in Actions, with no -B or env
+        # override. Enter collection verification so its local imports run.
+        code = """
+import runpy, sys
+from pathlib import Path
+sys.dont_write_bytecode = False
+scope = runpy.run_path('verify_contract.py', run_name='plain_cli_test')
+try:
+    scope['verify_season_collection'](Path('.'), {'files': {}}, {})
+except AssertionError as error:
+    assert 'inventory missing' in str(error)
+else:
+    raise AssertionError('invalid inventory unexpectedly passed')
+"""
+        subprocess.run([sys.executable, "-c", code], cwd=scripts, env=env,
+                       check=True, capture_output=True, text=True)
+        self.assertFalse(list(self.root.rglob("__pycache__")))
 
 
 if __name__ == "__main__":

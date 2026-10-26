@@ -13,12 +13,16 @@ import shutil
 import ssl
 import tempfile
 import subprocess
+import sys
 import time
 import urllib.request
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+# Plain CLI invocations must preserve the same source hygiene as python -B.
+sys.dont_write_bytecode = True
 
 try:
     import certifi

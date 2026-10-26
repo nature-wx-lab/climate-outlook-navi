@@ -8,8 +8,12 @@ import hashlib
 import json
 import re
 import struct
+import sys
 from datetime import date, timedelta
 from pathlib import Path, PurePosixPath
+
+# Verification must not create files that the source privacy gate forbids.
+sys.dont_write_bytecode = True
 
 import numpy as np
 
