@@ -4,7 +4,13 @@ on:
   push:
     branches: [main]
   schedule:
+    # JST 15:05 is the daily refresh, including observations. The other
+    # schedules check seasonal issues after publication; --probe consults
+    # the official calendar and unresolved collection state before fetching.
     - cron: "5 6 * * *"
+    - cron: "45 5 * * *"
+    - cron: "5 7 * * *"
+    - cron: "5 9 * * *"
   workflow_dispatch:
     inputs:
       refresh:
@@ -42,6 +48,7 @@ jobs:
       should_deploy: ${{ steps.state.outputs.should_deploy }}
       source_sha: ${{ steps.state.outputs.source_sha }}
       recent_refresh_failed: ${{ steps.recent_refresh.outcome == 'failure' }}
+      season_refresh_failed: ${{ steps.season_refresh.outcome == 'failure' }}
     steps:
       - name: Check out main with complete history
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -65,8 +72,22 @@ jobs:
         run: python -B -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Refresh validated seasonal forecast derivative
+        id: season_refresh
+        continue-on-error: true
         if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh)
-        run: python scripts/update_season_forecast.py
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          SEASON_PROBE: ${{ github.event_name == 'schedule' && github.event.schedule != '5 6 * * *' }}
+        run: |
+          if test "$SEASON_PROBE" = "true"; then
+            python -B scripts/update_season_forecast.py --probe
+          else
+            python -B scripts/update_season_forecast.py
+          fi
+
+      - name: Report independent seasonal collection failures
+        if: steps.season_refresh.outcome == 'failure'
+        run: echo '::warning::Seasonal collection has unresolved failures or missing issues. Independently verified issues can still be published after the full candidate checks.'
 
       # Late completions and revisions are a normal JMA publication pattern.
       # The updater absorbs them by re-reading the full retained window. A
@@ -75,14 +96,28 @@ jobs:
       - name: Refresh validated recent-temperature derivative
         id: recent_refresh
         continue-on-error: true
-        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh && inputs.refresh_observations)
+        if: (github.event_name == 'schedule' && github.event.schedule == '5 6 * * *') || (github.event_name == 'workflow_dispatch' && inputs.refresh && inputs.refresh_observations)
         run: python scripts/update_recent_temperature_anomaly.py
 
       - name: Report retained observations when refresh fails
         if: steps.recent_refresh.outcome == 'failure'
         run: echo '::warning::Observation refresh failed its quality gate. Keeping the last verified observations; seasonal forecasts can still be published independently.'
 
+      - name: Determine whether candidate validation is needed
+        id: candidate
+        env:
+          SEASON_PROBE: ${{ github.event_name == 'schedule' && github.event.schedule != '5 6 * * *' }}
+        run: |
+          # Only an entirely unchanged seasonal probe may skip validation.
+          # Any change, including unexpected paths, must pass the usual gates.
+          verify_candidate=true
+          if test "$SEASON_PROBE" = "true" && test -z "$(git status --porcelain --untracked-files=all)"; then
+            verify_candidate=false
+          fi
+          echo "verify_candidate=$verify_candidate" >> "$GITHUB_OUTPUT"
+
       - name: Verify candidate before commit
+        if: steps.candidate.outputs.verify_candidate == 'true'
         env:
           PRIVACY_DENYLIST: ${{ secrets.PRIVACY_DENYLIST }}
         run: |
@@ -183,6 +218,17 @@ jobs:
       - name: Keep observation quality failures actionable after independent forecast publication
         run: |
           echo '::error::Observation refresh failed its quality gate. Last verified observations are retained. Seasonal publication proceeds independently; observation recovery still requires attention.'
+          exit 1
+
+  season-status:
+    needs: [prepare, verify-public]
+    if: always() && needs.prepare.outputs.season_refresh_failed == 'true'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Keep missing seasonal issues and collection failures actionable
+        run: |
+          echo '::error::Seasonal collection has unresolved failures or missing expected issues. Independently verified issues were eligible for publication only after the full quality gates.'
           exit 1
 
   deploy:

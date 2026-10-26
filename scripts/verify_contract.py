@@ -961,6 +961,46 @@ def verify_season_v2(
     return probability_triplets, available_terms
 
 
+def verify_season_collection(root: Path, manifest: dict, archive: dict) -> dict[str, int | bool]:
+    from season_issue_calendar import expected_issues_since, validate_issue_calendar
+    from update_season_forecast import validate_reference, parse_datetime
+
+    controls = {"collection": "collection-status.json", "calendar": "issue-calendar.json", "reference": "collection-reference.json"}
+    values = {}
+    for name, filename in controls.items():
+        entry = manifest["files"].get(name)
+        require(isinstance(entry, dict) and entry.get("path") == filename, f"season {name} inventory missing")
+        path = root / filename
+        require(path.stat().st_size == entry["bytes"] and sha256_path(path) == entry["sha256"], f"season {name} checksum mismatch")
+        values[name] = json.loads(path.read_text())
+    status, issue_calendar = values["collection"], values["calendar"]
+    validate_issue_calendar(issue_calendar)
+    validate_reference(values["reference"])
+    require(status.get("schema_version") == 1 and status.get("retention_months") == 12, "season collection status schema mismatch")
+    started = parse_datetime(status["monitoring_started_at"])
+    checked = parse_datetime(status["checked_through"])
+    coverage_start = parse_datetime(status["coverage_start"])
+    require(started <= coverage_start <= checked, "season collection check range mismatch")
+    errors = status.get("fetch_errors")
+    require(isinstance(errors, dict) and set(errors) <= {"P1M", "P3M", "P6M", "reference", "calendar"}, "season collection error keys invalid")
+    require(all(value in {"product_fetch_or_validation_failed", "official_reference_unavailable", "calendar_coverage_unavailable", "fetch_failed", "source_invalid"} for value in errors.values()), "season collection error code invalid")
+    expected = status.get("expected_issues")
+    require(isinstance(expected, list), "season expected issues missing")
+    actual_keys = [(entry["product"], entry["report_datetime"]) for entry in expected]
+    require(len(set(actual_keys)) == len(actual_keys), "duplicate expected season issue")
+    if "calendar" not in errors:
+        scheduled = expected_issues_since(coverage_start, checked, issue_calendar, grace_minutes=10)
+        require(actual_keys == [(entry["product"], entry["report_datetime"]) for entry in scheduled], "season expected-issue calendar coverage mismatch")
+    missing = 0
+    for entry in expected:
+        matches = sorted(item["id"] for item in archive["editions"] if item["product"] == entry["product"] and parse_datetime(item["report_datetime"]) == parse_datetime(entry["report_datetime"]))
+        require(entry.get("edition_ids") == matches, "season collection receipt does not match archive")
+        require(entry.get("status") == ("captured" if matches else "missing"), "season collection missing state mismatch")
+        missing += not matches
+    require(status.get("missing_issue_count") == missing, "season missing issue count mismatch")
+    return {"missing_issue_count": missing, "fetch_error_count": len(errors), "complete": missing == 0 and not errors}
+
+
 def verify_season(site_root: Path) -> dict[str, int | bool | str]:
     root = site_root / "data" / "season"
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
@@ -980,6 +1020,7 @@ def verify_season(site_root: Path) -> dict[str, int | bool | str]:
     require(len(dataset_dirs) <= retention, "unreferenced season datasets exceed retention")
     require(latest_path.parent in dataset_dirs, "active season dataset directory missing")
     expected_files = {Path("manifest.json")}
+    collection = None
     if "archive" in manifest["files"]:
         archive_entry = manifest["files"]["archive"]
         archive_path = root / archive_entry["path"]
@@ -1002,6 +1043,9 @@ def verify_season(site_root: Path) -> dict[str, int | bool | str]:
             for element in edition["product"]["elements"].values():
                 for term in element["terms"]:
                     verify_probability_regions(term["regions"], entry["id"], {feature["properties"]["code"] for feature in regions["features"]}, require_full_coverage=False)
+        if str(manifest.get("generator_version", "")).startswith("4.") or "collection" in manifest["files"]:
+            collection = verify_season_collection(root, manifest, archive)
+            expected_files.update(Path(manifest["files"][name]["path"]) for name in ("collection", "calendar", "reference"))
     for dataset_dir in dataset_dirs:
         dataset_relative = dataset_dir.relative_to(root)
         expected_files.add(dataset_relative / "latest.json")
@@ -1029,6 +1073,7 @@ def verify_season(site_root: Path) -> dict[str, int | bool | str]:
         "dataset_count": len(dataset_dirs),
         "dataset_retention": retention,
         "checksums_ok": True,
+        **({"collection": collection} if collection is not None else {}),
     }
 
 

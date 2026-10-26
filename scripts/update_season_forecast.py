@@ -13,7 +13,9 @@ import shutil
 import ssl
 import tempfile
 import subprocess
+import time
 import urllib.request
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -25,7 +27,10 @@ except ImportError:  # pragma: no cover - system CA remains the fallback
 
 
 SCHEMA_VERSION = 2
-GENERATOR_VERSION = "3.0.0"
+GENERATOR_VERSION = "4.0.0"
+COLLECTION_FILE = "collection-status.json"
+CALENDAR_FILE = "issue-calendar.json"
+REFERENCE_FILE = "collection-reference.json"
 PRODUCT_URLS = {
     "P1M": "https://www.jma.go.jp/bosai/season/data/P1M.json",
     "P3M": "https://www.jma.go.jp/bosai/season/data/P3M.json",
@@ -107,6 +112,18 @@ def sha256_bytes(value: bytes) -> str:
 
 
 def fetch_json(url: str, timeout: int) -> tuple[dict[str, Any], dict[str, str | None], bytes]:
+    error: Exception | None = None
+    for attempt in range(3):
+        try:
+            return fetch_json_once(url, timeout)
+        except Exception as exc:
+            error = exc
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+    raise RuntimeError("official JSON fetch failed after three attempts") from error
+
+
+def fetch_json_once(url: str, timeout: int) -> tuple[dict[str, Any], dict[str, str | None], bytes]:
     request = urllib.request.Request(url, headers={"User-Agent": "NatureWxLab-climate-outlook-navi/1.0"})
     context = ssl.create_default_context(cafile=certifi.where()) if certifi else ssl.create_default_context()
     with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
@@ -373,11 +390,20 @@ def write_json(path: Path, payload: object) -> bytes:
 
 def atomic_json(path: Path, payload: object) -> bytes:
     raw = (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+    if path.is_file() and path.read_bytes() == raw:
+        return raw
     path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile("wb", dir=path.parent, delete=False) as handle:
-        handle.write(raw)
-        temporary = Path(handle.name)
-    os.replace(temporary, path)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("wb", dir=path.parent, delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
     return raw
 
 
@@ -491,7 +517,7 @@ def archive_products(root: Path, products: dict[str, Any], regions: dict[str, An
         geometry_raw = (json.dumps(geometry, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
         geometry_path = root / f"history/boundaries/{sha256_bytes(geometry_raw)[:16]}.geojson"
         if not geometry_path.exists():
-            write_json(geometry_path, geometry)
+            atomic_json(geometry_path, geometry)
         boundary_entry = file_entry(root, geometry_path)
         for name, product in bundle.items():
             if name not in SUPPORTED_TERMS or parse_datetime(product["report_datetime"]) < cutoff:
@@ -505,7 +531,7 @@ def archive_products(root: Path, products: dict[str, Any], regions: dict[str, An
             if edition_id in entries:
                 continue
             path = root / f"history/issues/{edition_id}.json"
-            write_json(path, {"schema_version": 1, "product_id": name, "source_url": source.get("source_url", PRODUCT_URLS.get(name, PRODUCT_URLS["P6M"])),
+            atomic_json(path, {"schema_version": 1, "product_id": name, "source_url": source.get("source_url", PRODUCT_URLS.get(name, PRODUCT_URLS["P6M"])),
                               "source_sha256": source_hash, "product": stable})
             entries[edition_id] = {"id": edition_id, "product": name, "report_datetime": product["report_datetime"],
                                    "recorded_at": datetime.now(timezone.utc).isoformat(timespec="microseconds"),
@@ -539,69 +565,241 @@ def archive_products(root: Path, products: dict[str, Any], regions: dict[str, An
     return file_entry(root, index_path)
 
 
+def verified_json(root: Path, entry: dict[str, Any]) -> dict[str, Any]:
+    relative = Path(entry["path"])
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError("unsafe seasonal asset path")
+    path = root / relative
+    if path.is_symlink() or root not in path.resolve().parents:
+        raise ValueError("seasonal asset escapes its root")
+    raw = path.read_bytes()
+    if len(raw) != entry["bytes"] or sha256_bytes(raw) != entry["sha256"]:
+        raise ValueError("seasonal asset checksum mismatch")
+    return json.loads(raw)
+
+
+def validate_reference(reference: dict[str, Any]) -> dict[str, Any]:
+    if reference.get("schema_version") != 1:
+        raise ValueError("collection reference schema mismatch")
+    regions = sanitize_regions(reference["regions"])
+    codes = {feature["properties"]["code"] for feature in regions["features"]}
+    if len(regions["features"]) != 385 or len(codes) != 376 or "hoppo" not in codes:
+        raise ValueError("collection reference boundary coverage mismatch")
+    recipes = reference["recipes"]
+    if not isinstance(recipes, dict) or set(recipes) != set(FORECAST_ORDER):
+        raise ValueError("collection reference recipe set mismatch")
+    for recipe in recipes.values():
+        if not isinstance(recipe, list) or len(recipe) != len(set(recipe)) or not set(recipe) <= codes:
+            raise ValueError("collection reference recipe codes mismatch")
+    major = ("010100", "010200", "010300", "010400", "010500", "010600", "010700", "010800", "010900", "011000", "011100")
+    if set().union(*(set(recipes[code]) for code in major)) != codes:
+        raise ValueError("collection reference major coverage mismatch")
+    for key, url in (("boundaries", REGIONS_URL), ("area_hierarchy", AREA_URL)):
+        source = reference[key]
+        digest = source.get("source_sha256", "")
+        if source.get("source_url") != url or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            raise ValueError("collection reference provenance mismatch")
+    return {**reference, "regions": regions}
+
+
+def load_reference(root: Path, previous: dict[str, Any] | None, timeout: int,
+                   errors: dict[str, str]) -> dict[str, Any]:
+    try:
+        regions, region_headers, region_raw = fetch_json(REGIONS_URL, timeout)
+        area, area_headers, area_raw = fetch_json(AREA_URL, timeout)
+        codes = {str(feature.get("properties", {}).get("code")) for feature in regions.get("features", [])}
+        if set(area.get("class15s", {})) != codes - {"hoppo"}:
+            raise ValueError("official area and boundary code sets differ")
+        reference = validate_reference({
+            "schema_version": 1, "regions": sanitize_regions(regions), "recipes": build_recipes(area),
+            "boundaries": {"source_url": REGIONS_URL, "source_sha256": sha256_bytes(region_raw), "etag": region_headers.get("etag")},
+            "area_hierarchy": {"source_url": AREA_URL, "source_sha256": sha256_bytes(area_raw), "etag": area_headers.get("etag")},
+        })
+    except Exception:
+        errors["reference"] = "official_reference_unavailable"
+        entry = (previous or {}).get("files", {}).get("reference")
+        if entry is None:
+            raise ValueError("no verified collection reference is available")
+        reference = validate_reference(verified_json(root, entry))
+    atomic_json(root / REFERENCE_FILE, reference)
+    return reference
+
+
+def validate_cached_product(name: str, product: dict[str, Any], codes: set[str]) -> dict[str, Any]:
+    """Validate last-known-good content before mixing it with a new product."""
+    value = deepcopy(product)
+    parse_datetime(value["report_datetime"])
+    parse_datetime(value["target_datetime"])
+    if value["target_duration"] != {"WARM": "P6M", "COLD": "P5M"}.get(name, name):
+        raise ValueError("cached product duration mismatch")
+    if set(value["elements"]) != set(ELEMENTS):
+        raise ValueError("cached product elements mismatch")
+    for element, indices in SUPPORTED_TERMS[name].items():
+        payload = value["elements"][element]
+        terms = payload["terms"]
+        if payload["supported"] is not bool(indices) or [term["id"] for term in terms] != [str(index) for index in indices]:
+            raise ValueError("cached product term contract mismatch")
+        for term in terms:
+            resolved = term["regions"]
+            if not isinstance(resolved, dict) or not set(resolved) <= codes or term["resolved_class15_count"] != len(resolved):
+                raise ValueError("cached product region coverage mismatch")
+            partial = element == "snowfall" or (name == "WARM" and element == "precipitation" and term["id"] == "1")
+            if not partial and set(resolved) != codes:
+                raise ValueError("cached full product region coverage mismatch")
+            for region in resolved.values():
+                triplet = region["probabilities"]
+                if not isinstance(triplet, list) or len(triplet) != 3 or any(not isinstance(v, int) or not 0 <= v <= 100 for v in triplet) or sum(triplet) != 100:
+                    raise ValueError("cached probability mismatch")
+            parse_datetime(term["start"])
+            parse_datetime(term["end"])
+    first = value["elements"]["temperature"]["terms"][0]
+    now = datetime.now(timezone.utc)
+    age = (now - parse_datetime(value["report_datetime"])).total_seconds() / 86400
+    limit = 9 if name == "P1M" else 45 if name == "P3M" else 366
+    value["status"] = "available" if now <= parse_datetime(first["end"]) and age <= limit else "stale"
+    value["freshness"]["report_age_days_at_generation"] = round(age, 3)
+    return value
+
+
+def collection_status(root: Path, started: str, issue_calendar: dict[str, Any] | None,
+                      errors: dict[str, str], now: datetime) -> dict[str, Any]:
+    from season_issue_calendar import expected_issues_since
+
+    cutoff = max(parse_datetime(started), add_months(now, -12))
+    archive_path = root / "history/index.json"
+    editions = json.loads(archive_path.read_text())["editions"] if archive_path.is_file() else []
+    expected = []
+    if issue_calendar is not None:
+        try:
+            expected = expected_issues_since(cutoff, now, issue_calendar, grace_minutes=10)
+        except Exception:
+            errors["calendar"] = "calendar_coverage_unavailable"
+    results = []
+    for issue in expected:
+        matches = [entry["id"] for entry in editions if entry["product"] == issue["product"] and parse_datetime(entry["report_datetime"]) == parse_datetime(issue["report_datetime"])]
+        results.append({"product": issue["product"], "report_datetime": issue["report_datetime"],
+                        "status": "captured" if matches else "missing", "edition_ids": sorted(matches)})
+    jst = timezone(timedelta(hours=9))
+    checked_through = max(parse_datetime(started), now.astimezone(jst).replace(hour=0, minute=0, second=0, microsecond=0),
+                          *(parse_datetime(item["report_datetime"]) + timedelta(minutes=10) for item in expected))
+    return {"schema_version": 1, "monitoring_started_at": started, "retention_months": 12,
+            "coverage_start": cutoff.isoformat(timespec="seconds"),
+            "checked_through": checked_through.isoformat(timespec="seconds"),
+            "expected_issues": results, "missing_issue_count": sum(item["status"] == "missing" for item in results),
+            "fetch_errors": dict(sorted(errors.items()))}
+
+
 def update(args: argparse.Namespace) -> dict[str, Any]:
+    from season_issue_calendar import load_issue_calendar, probe_due
+
+    root = Path(args.output).resolve()
+    previous = json.loads((root / "manifest.json").read_text()) if (root / "manifest.json").is_file() else None
+    if previous and str(previous.get("generator_version", "")).startswith("4.") and not {"collection", "calendar", "reference"} <= previous.get("files", {}).keys():
+        raise ValueError("collection controls are missing; refusing to reset monitoring")
+    errors: dict[str, str] = {}
+    now = datetime.now(timezone.utc)
+    old_status = verified_json(root, previous["files"]["collection"]) if previous and "collection" in previous["files"] else None
+    started = old_status["monitoring_started_at"] if old_status else now.isoformat(timespec="seconds")
+    issue_calendar = None
+    calendar_cache = None
+    if previous and "calendar" in previous["files"]:
+        verified_json(root, previous["files"]["calendar"])
+        calendar_cache = root / CALENDAR_FILE
+    try:
+        issue_calendar = load_issue_calendar(cache_path=calendar_cache, now=now)
+        if issue_calendar.get("acquisition_error"):
+            errors["calendar"] = issue_calendar["acquisition_error"]
+        atomic_json(root / CALENDAR_FILE, {key: value for key, value in issue_calendar.items() if not key.startswith("acquisition_")})
+    except Exception:
+        errors["calendar"] = "calendar_coverage_unavailable"
+    status = collection_status(root, started, issue_calendar, errors, now)
+    retry_pending = bool((old_status or {}).get("fetch_errors") or (old_status or {}).get("missing_issue_count") or status["missing_issue_count"])
+    calendar_entry = (previous or {}).get("files", {}).get("calendar")
+    calendar_unchanged = calendar_entry is not None and file_entry(root, root / CALENDAR_FILE) == calendar_entry
+    if getattr(args, "probe", False) and old_status and calendar_unchanged and not errors and not retry_pending and not probe_due(now, issue_calendar, monitoring_start=parse_datetime(started)):
+        # A high-frequency trigger may inspect the official release calendar,
+        # but should not refresh lower-frequency data or deploy an unchanged site.
+        return {**previous, "changed": False, "removed_dataset_ids": [], "collection_ok": True, "probe_skipped": True}
+
+    reference = load_reference(root, previous, args.timeout, errors)
+    codes = {feature["properties"]["code"] for feature in reference["regions"]["features"]}
+    products: dict[str, Any] = {}
+    sources: dict[str, Any] = {}
+    if previous:
+        cached = verified_json(root, previous["files"]["latest"])
+        for name, product in cached["products"].items():
+            products[name] = validate_cached_product(name, product, codes)
+            sources[name] = deepcopy(previous["products"][name])
+    fetched_at = now_iso()
+    changed = False
+    result = previous
+    for source_name, url in PRODUCT_URLS.items():
+        try:
+            payload, headers, raw = fetch_json(url, args.timeout)
+            name = ("WARM" if parse_datetime(payload["reportDatetime"]).month in (2, 3, 4) else "COLD") if source_name == "P6M" else source_name
+            validated = validate_product(name, payload, reference["recipes"])
+            if name in products and not args.allow_report_regression and parse_datetime(validated["report_datetime"]) < parse_datetime(products[name]["report_datetime"]):
+                raise ValueError("official report date regressed")
+        except Exception:
+            errors[source_name] = "product_fetch_or_validation_failed"
+            continue
+        if source_name == "P6M":
+            other = "COLD" if name == "WARM" else "WARM"
+            products.pop(other, None)
+            sources.pop(other, None)
+        products[name] = validated
+        sources[name] = {"source_sha256": sha256_bytes(raw), **headers}
+        # Checkpoint every good product BEFORE requesting the next one. A
+        # different product's network/schema failure cannot discard this issue.
+        atomic_json(root / COLLECTION_FILE, collection_status(root, started, issue_calendar, errors, now))
+        result = promote_snapshot(args, products, sources, reference, fetched_at,
+                                  (started, issue_calendar, errors, now))
+        changed = changed or result["changed"]
+    if not products or not {"P1M", "P3M"} <= products.keys():
+        raise ValueError("no complete primary last-known-good product view is available")
+    status = collection_status(root, started, issue_calendar, errors, now)
+    atomic_json(root / COLLECTION_FILE, status)
+    result = promote_snapshot(args, products, sources, reference, fetched_at,
+                              (started, issue_calendar, errors, now))
+    changed = changed or result["changed"]
+    return {**result, "changed": changed, "collection_ok": not errors and status["missing_issue_count"] == 0,
+            "collection_status": status, "probe_skipped": False}
+
+
+def promote_snapshot(args: argparse.Namespace, products: dict[str, Any],
+                     sources: dict[str, Any], reference: dict[str, Any],
+                     fetched_at: str, collection_context: tuple | None = None) -> dict[str, Any]:
+    """Checkpoint a complete, validated merged view after each good product."""
     output_root = Path(args.output).resolve()
     manifest_path = output_root / "manifest.json"
     staging_parent = output_root / ".staging"
-    try:
-        staging_parent.rmdir()
-    except OSError:
-        pass
-    previous_manifest = None
-    if manifest_path.is_file():
-        previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    fetched_at = now_iso()
-    products_raw: dict[str, dict[str, Any]] = {}
-    source_headers: dict[str, Any] = {}
-    source_hashes: dict[str, str] = {}
-    for product, url in PRODUCT_URLS.items():
-        payload, headers, raw = fetch_json(url, args.timeout)
-        if product == "P6M":
-            product = "WARM" if parse_datetime(payload["reportDatetime"]).month in (2, 3, 4) else "COLD"
-        products_raw[product] = payload
-        source_headers[product] = headers
-        source_hashes[product] = sha256_bytes(raw)
-    regions, regions_headers, regions_raw = fetch_json(REGIONS_URL, args.timeout)
-    area, area_headers, area_raw = fetch_json(AREA_URL, args.timeout)
-
-    features = regions.get("features")
-    if regions.get("type") != "FeatureCollection" or not isinstance(features, list) or len(features) != 385:
-        raise ValueError("class15s GeoJSON must contain 385 features")
-    region_codes = [str(feature.get("properties", {}).get("code")) for feature in features]
-    unique_codes = set(region_codes)
-    if len(unique_codes) != 376 or "hoppo" not in unique_codes:
-        raise ValueError("class15s GeoJSON must contain 376 unique codes including hoppo")
-    if set(area.get("class15s", {})) != unique_codes - {"hoppo"}:
-        raise ValueError("area.class15s and class15s GeoJSON code sets do not match")
-    sanitized_regions = sanitize_regions(regions)
+    previous_manifest = json.loads(manifest_path.read_text()) if manifest_path.is_file() else None
+    sanitized_regions = reference["regions"]
     features = sanitized_regions["features"]
-
-    recipes = build_recipes(area)
-    major_union = set().union(*(set(recipes[code]) for code in [
-        "010100", "010200", "010300", "010400", "010500", "010600",
-        "010700", "010800", "010900", "011000", "011100",
-    ]))
-    if major_union != unique_codes:
-        raise ValueError(f"Major region recipes cover {len(major_union)} codes, expected 376")
-
-    products = {product: validate_product(product, payload, recipes) for product, payload in products_raw.items()}
-    if previous_manifest and not args.allow_report_regression:
-        for product in products:
-            previous_report = previous_manifest.get("products", {}).get(product, {}).get("report_datetime")
-            if previous_report and parse_datetime(products[product]["report_datetime"]) < parse_datetime(previous_report):
-                raise ValueError(f"{product} reportDatetime regressed; refusing to replace the last-known-good dataset")
+    unique_codes = {feature["properties"]["code"] for feature in features}
+    source_hashes = {name: source["source_sha256"] for name, source in sources.items()}
+    source_headers = sources
+    controls = {
+        key: file_entry(output_root, output_root / name)
+        for key, name in (("collection", COLLECTION_FILE), ("calendar", CALENDAR_FILE), ("reference", REFERENCE_FILE))
+        if (output_root / name).is_file()
+    }
     report_key = "|".join([
         GENERATOR_VERSION,
         *(products[product]["report_datetime"] for product in products),
         *(products[product]["status"] for product in products),
         *(source_hashes[product] for product in products),
-        sha256_bytes(regions_raw),
-        sha256_bytes(area_raw),
+        reference["boundaries"]["source_sha256"],
+        reference["area_hierarchy"]["source_sha256"],
     ])
     dataset_id = hashlib.sha256(report_key.encode("utf-8")).hexdigest()[:16]
     archive_entry = archive_products(output_root, products, sanitized_regions,
         {name: {"source_url": PRODUCT_URLS.get(name, PRODUCT_URLS["P6M"]), "source_sha256": source_hashes[name]} for name in products},
         import_history=args.import_git_history)
+    if collection_context is not None:
+        started, issue_calendar, errors, now = collection_context
+        atomic_json(output_root / COLLECTION_FILE, collection_status(output_root, started, issue_calendar, errors, now))
+        controls["collection"] = file_entry(output_root, output_root / COLLECTION_FILE)
     final_dataset_dir = output_root / "datasets" / dataset_id
     if final_dataset_dir.is_dir() and manifest_path.is_file():
         current_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -616,7 +814,10 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
                 and sha256_bytes(latest_path.read_bytes()) == latest_entry.get("sha256")
                 and sha256_bytes(regions_path.read_bytes()) == regions_entry.get("sha256")
             ):
-                archive_changed = current_manifest["files"].get("archive") != archive_entry
+                archive_changed = current_manifest["files"].get("archive") != archive_entry or any(
+                    current_manifest["files"].get(key) != value for key, value in controls.items()
+                )
+                current_manifest["files"].update(controls)
                 current_manifest["files"]["archive"] = archive_entry
                 if archive_changed:
                     atomic_json(manifest_path, current_manifest)
@@ -655,6 +856,7 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
             "fetched_at": fetched_at,
             "status": "available" if all(product["status"] == "available" for product in products.values()) else "stale",
             "files": {
+                **controls,
                 "archive": archive_entry,
                 "latest": {
                     "path": f"datasets/{dataset_id}/latest.json",
@@ -694,16 +896,8 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
                 }
                 for product in products
             },
-            "boundaries": {
-                "source_url": REGIONS_URL,
-                "source_sha256": sha256_bytes(regions_raw),
-                "etag": regions_headers["etag"],
-            },
-            "area_hierarchy": {
-                "source_url": AREA_URL,
-                "source_sha256": sha256_bytes(area_raw),
-                "etag": area_headers["etag"],
-            },
+            "boundaries": deepcopy(reference["boundaries"]),
+            "area_hierarchy": deepcopy(reference["area_hierarchy"]),
             "validation": {
                 "feature_count": len(features),
                 "unique_class15_codes": len(unique_codes),
@@ -724,11 +918,7 @@ def update(args: argparse.Namespace) -> dict[str, Any]:
             },
         }
         output_root.mkdir(parents=True, exist_ok=True)
-        manifest_raw = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-        with tempfile.NamedTemporaryFile("wb", dir=output_root, delete=False) as handle:
-            handle.write(manifest_raw)
-            temp_manifest = Path(handle.name)
-        os.replace(temp_manifest, manifest_path)
+        atomic_json(manifest_path, manifest)
         manifest["changed"] = True
         previous_dataset_id = str(previous_manifest.get("dataset_id", "")) if previous_manifest else ""
         manifest["removed_dataset_ids"] = prune_datasets(
@@ -752,6 +942,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="data/season")
     parser.add_argument("--timeout", type=int, default=30)
+    parser.add_argument("--probe", action="store_true", help="only collect on release days or while an acquisition is missing or failed")
     parser.add_argument("--import-git-history", action="store_true", help="import available verified forecast editions from this repository's last year")
     parser.add_argument(
         "--allow-report-regression",
@@ -776,7 +967,12 @@ def main() -> None:
         "validation": manifest["validation"],
         "changed": manifest["changed"],
         "removed_dataset_ids": manifest["removed_dataset_ids"],
+        "collection_ok": manifest.get("collection_ok", True),
+        "collection_status": manifest.get("collection_status"),
+        "probe_skipped": manifest.get("probe_skipped", False),
     }, ensure_ascii=False, indent=2))
+    if not manifest.get("collection_ok", True):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
